@@ -198,6 +198,22 @@ select:disabled{opacity:.45;cursor:default}
 .hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center}
 .hero h1{font-size:clamp(44px,6.4vw,92px);font-weight:800;letter-spacing:-0.02em;max-width:11ch}
 .hero .sub{font-size:21px;color:var(--ink-2);max-width:34ch;margin-top:18px}
+.modal-back{position:fixed;inset:0;background:rgba(30,53,55,.38);z-index:80;display:grid;place-items:center;padding:16px;animation:fadeIn .2s ease}
+.modal-back[hidden]{display:none}
+.modal{position:relative;background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(30,53,55,.3);width:min(560px,100%);max-height:calc(100svh - 32px);overflow:auto;padding:22px 24px;animation:popIn .25s ease}
+.modal h3{font-size:24px;margin:0 0 4px}
+.modal .ym-kpis{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.modal .ym-kpis .kpi{flex:1 1 140px}
+.modal ul{padding-left:0;list-style:none;margin:6px 0 10px}
+.modal li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule)}
+.modal li .tag{flex:0 0 auto;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;color:#fff;margin-top:2px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.chart-box.geo{height:clamp(320px,36vw,620px)}
+.fx-chg{animation:fxPulse 1.6s ease-out;border-radius:5px}
+@keyframes fxPulse{0%{background-color:rgba(255,217,142,.9);box-shadow:0 0 0 4px rgba(255,217,142,.9)}100%{background-color:rgba(255,217,142,0);box-shadow:0 0 0 4px rgba(255,217,142,0)}}
+.fx-chg[data-fx]::after{content:attr(data-fx);margin-left:4px;font-size:.7em;vertical-align:.12em;animation:fxFade 2.4s forwards}
+.fx-chg[data-fx="▲"]::after{color:#1F9A76} .fx-chg[data-fx="▼"]::after{color:#D9604C}
+@keyframes fxFade{0%,70%{opacity:1}100%{opacity:0}}
 .hdb{justify-self:center;display:block;width:min(430px,100%);height:auto;cursor:pointer;overflow:visible}
 .hdb .w{transition:fill .45s ease}
 .hdb .w.lit{animation:flick .55s ease-out}
@@ -224,7 +240,7 @@ select:disabled{opacity:.45;cursor:default}
 body.on-map .lift, body.on-map main, body.on-map #assumeBtn{display:none}
 body:not(.on-map) #layerMap{display:none}
 .fade-in{animation:fadeIn .6s ease both}
-@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
 
 /* ---------- Layer 1: the map -------------------------------------------- */
 .layer-map{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) min(440px,38vw)}
@@ -473,21 +489,22 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <section class="floor" id="f2" data-label="Town clusters" data-short="2">
   <span class="floor-no" aria-hidden="true">2</span>
   <h2>Towns fall into a few demand profiles</h2>
-  <p class="lede">K-means groups the 26 HDB towns by how often flats sell, how fast that is growing, how many flats hit MOP soon, and how much renting goes on. Singapore is small, so we plan nationally and use clusters to choose where depots go.</p>
+  <p class="lede">Not every town moves the same way. We score each of the 26 HDB towns on five things (how often flats are resold, how fast that is growing, how many flats reach MOP soon, how much renting goes on, how many flats are 4-room or bigger) and let k-means put similar towns into groups. The groups tell us what kind of work to expect where, and a second step picks where to park the trucks.</p>
   <div class="grid g2">
     <div class="panel">
       <div class="controls">
-        <label class="rng" style="min-width:150px">Number of clusters <output id="kOut">4</output><input id="kIn" type="range" min="2" max="6" value="4"></label>
-        <label class="rng" style="min-width:150px">Depots <output id="dOut">2</output><input id="dIn" type="range" min="1" max="3" value="2"></label>
-        <button class="btn ghost" id="rerunK">Replay k-means</button>
+        <label class="rng" style="min-width:150px">Number of groups <output id="kOut">4</output><input id="kIn" type="range" min="2" max="6" value="4"></label>
+        <label class="rng" style="min-width:150px">Number of depots <output id="dOut">2</output><input id="dIn" type="range" min="1" max="3" value="2"></label>
+        <button class="btn ghost" id="rerunK">Replay the grouping</button>
       </div>
-      <div class="chart-box tall"><canvas id="cMap" aria-label="Map of towns coloured by cluster"></canvas></div>
-      <p class="note">Bubbles sit at each town's location; size = HDB flats. Diamonds = depot sites from a second k-means on town locations weighted by estimated moves.</p>
+      <div class="chart-box geo"><canvas id="cMap" aria-label="Map of towns coloured by cluster"></canvas></div>
+      <p class="note">Each bubble is an HDB town at its real location on the map; bigger bubble = more HDB flats; colour = its group. Hover for the town's scores. Black diamonds = suggested depot sites: a second k-means on the towns' locations, pulled towards towns with more estimated moves, so each depot sits close to the most work.</p>
     </div>
     <div class="panel">
-      <h3>Cluster profiles</h3>
-      <table id="clusterTable"><thead><tr><th>Cluster</th><th class="num">Towns</th><th class="num">Resold %/yr</th><th class="num">MOP soon %</th><th class="num">Rented %/yr</th></tr></thead><tbody></tbody></table>
-      <h3 style="margin-top:18px">Choosing k</h3>
+      <h3>The groups, and what they mean for us</h3>
+      <table id="clusterTable"><thead><tr><th>Group</th><th class="num">Towns</th><th class="num" title="Share of the town's flats resold in the last 12 months">Resold a year</th><th class="num" title="Share of flats completed 2021-2026, which reach MOP by 2031">Reach MOP by 2031</th><th class="num" title="Rental approvals in the last 12 months / flats">Rented out a year</th></tr></thead><tbody></tbody></table>
+      <p class="note">Group averages. Each group is named after what makes it stand out most.</p>
+      <h3 style="margin-top:18px">How many groups?</h3>
       <div class="chart-box short"><canvas id="cElbow" aria-label="Elbow chart"></canvas></div>
       <p class="note" id="silNote"></p>
     </div>
@@ -538,7 +555,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
   <div class="panel" style="margin-top:20px">
     <h3 id="longTitle">36 years of HDB resales, and the next five</h3>
     <div class="chart-box"><canvas id="cLong" aria-label="HDB resales per year since 1990 with forecast"></canvas></div>
-    <p class="note">Every HDB resale from January 1990 to September 2026 (987,903 sales). The 1998–99 peak and the 2013 drop show how much rules and cooling measures move the market, which is why the forecast is calibrated on 2011 onwards. 2026 is annualised from January–September. Forecast band = 10th–90th percentile.</p>
+    <p class="note">Every HDB resale from January 1990 to September 2026 (987,903 sales). The 1998–99 peak and the 2013 drop show how much rules and cooling measures move the market, which is why the forecast is calibrated on 2011 onwards. 2026 is annualised from January–September. Forecast band = 10th–90th percentile. <b>Triangles mark rule changes (▲ opened demand up, ▼ restricted it). Click any year to see what happened.</b></p>
   </div>
 </section>
 
@@ -550,7 +567,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
   <div class="grid g2">
     <div class="panel">
       <div class="chart-box tall"><canvas id="cShock" aria-label="Market mood, GDP growth and rule changes, 1990 to 2026"></canvas></div>
-      <p class="note">Line: HDB resales above or below normal for their era (market mood). Bars: real GDP growth, coral = recession year (growth under 1%). Triangles: rule changes, ▲ opened demand up, ▼ restricted it. Hover for details. Sources: <a href="https://data.gov.sg/datasets/d_1f924c084e848ba3a27068d801c43f43/view" target="_blank" rel="noopener">SingStat real GDP growth</a>; rules from the <a href="https://lkyspp.nus.edu.sg/docs/default-source/case-studies/public-housing-in-singapore.pdf" target="_blank" rel="noopener">LKY School case study</a>, a <a href="https://propertyreviewsg.com/complete-timeline-of-singapores-property-cooling-measures/" target="_blank" rel="noopener">timeline of cooling measures</a> and the <a href="https://sg.news.yahoo.com/government-removes-15-month-wait-031926809.html" target="_blank" rel="noopener">July 2026 wait-out removal</a>.</p>
+      <p class="note">Line: HDB resales above or below normal for their era (market mood). Bars: real GDP growth, coral = recession year (growth under 1%). Triangles: rule changes, ▲ opened demand up, ▼ restricted it. Hover for details, click a year for the full story. Sources: <a href="https://data.gov.sg/datasets/d_1f924c084e848ba3a27068d801c43f43/view" target="_blank" rel="noopener">SingStat real GDP growth</a>; rules from the <a href="https://lkyspp.nus.edu.sg/docs/default-source/case-studies/public-housing-in-singapore.pdf" target="_blank" rel="noopener">LKY School case study</a>, a <a href="https://propertyreviewsg.com/complete-timeline-of-singapores-property-cooling-measures/" target="_blank" rel="noopener">timeline of cooling measures</a> and the <a href="https://sg.news.yahoo.com/government-removes-15-month-wait-031926809.html" target="_blank" rel="noopener">July 2026 wait-out removal</a>.</p>
     </div>
     <div class="panel">
       <h3>What 36 years say</h3>
@@ -669,6 +686,14 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
   </div>
 </section>
 </main>
+
+<!-- =============== YEAR DIALOG: what rules changed that year =============== -->
+<div class="modal-back" id="yearModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ymTitle">
+    <button class="info-close" id="ymClose" aria-label="Close">×</button>
+    <div id="ymBody"></div>
+  </div>
+</div>
 
 <!-- ======================= ASSUMPTIONS DRAWER ======================= -->
 <button class="btn" id="assumeBtn" aria-expanded="false" aria-controls="drawer">Adjust assumptions</button>
@@ -1346,7 +1371,7 @@ const marksPlugin = {
 const labelsPlugin = {
   id: 'pointLabels',
   afterDatasetsDraw(chart, _, opts) {
-    if (!opts || !opts.enabled) return; const { ctx } = chart; ctx.save();
+    if (!opts || !opts.enabled || chart.width < 520) return; const { ctx } = chart; ctx.save();   // too crowded on phones: tap a bubble instead
     ctx.font = '12px "Atkinson Hyperlegible", system-ui, sans-serif'; ctx.fillStyle = '#4F6466';
     chart.data.datasets.forEach((ds, di) => { if (!ds.labels) return; const meta = chart.getDatasetMeta(di); if (meta.hidden) return;
       meta.data.forEach((pt, i) => { const r = (ds.pointRadius && ds.pointRadius[i]) || 6; ctx.fillText(ds.labels[i], pt.x + r * 0.7 + 3, pt.y + 4); }); });
@@ -1397,7 +1422,7 @@ function renderHero(sc) {
    Modern point-block look: lift core with louvres and block number, two-tone
    facade with floor slabs, planter ledges and fins, rooftop garden and
    pergola, void deck with pillars. Animation, 6 s in total:
-     0.0-1.2 s  the block "builds" upward (clip from the ground)
+     0.0-1.2 s  the block fades in
      1.2-5.4 s  windows light from the ground floor up, in stream order
      5.4-6.0 s  the caption fades in
    ========================================================================== */
@@ -1418,7 +1443,7 @@ const HDB = {
     E('ellipse', { cx: 228, cy: GROUND + 4, rx: 170, ry: 10, fill: '#E7DFD2' });
     E('rect', { x: 18, y: GROUND, width: 364, height: 6, rx: 3, fill: '#D9CFBE' });
     for (const [cx, r] of [[44, 26], [384, 20]]) { E('rect', { x: cx - 3, y: GROUND - 34, width: 6, height: 34, fill: '#B49C7E', rx: 2 }); E('circle', { cx, cy: GROUND - 44, r, fill: '#9CCFA9' }); E('circle', { cx: cx + r * 0.35, cy: GROUND - 50, r: r * 0.6, fill: '#B5DDBE' }); }
-    const g = E('g', { 'clip-path': 'url(#hdbClip)' });
+    const g = E('g', { 'clip-path': 'url(#hdbClip)' }); this.g = g;
     // lift core: mint tower with louvres and the block number
     E('rect', { x: 44, y: TOP - 34, width: 52, height: GROUND - TOP + 34, fill: '#8FD3C1', rx: 4 }, g);
     for (let y = TOP + 10; y < BASE - 6; y += 9) E('rect', { x: 54, y, width: 32, height: 3, rx: 1.5, fill: '#72BFAA' }, g);
@@ -1454,8 +1479,8 @@ const HDB = {
     // order: ground floor up, left to right (the facade reads like a stacked bar)
     this.wins.sort((a, b) => a.f - b.f || a.c - b.c);
   },
-  prime() {                                   // before playing: block not built yet, all windows dark
-    this.clipRect.setAttribute('y', this.geo.GROUND + 10); this.clipRect.setAttribute('height', 0);
+  prime() {                                   // before playing: block invisible, all windows dark
+    this.clipRect.setAttribute('y', 0); this.clipRect.setAttribute('height', this.geo.GROUND + 10); this.g.style.opacity = 0;
   },
   play(streamOf, onLight, onDone) {
     this.timers.forEach(clearTimeout); this.timers = []; cancelAnimationFrame(this.raf);
@@ -1464,11 +1489,13 @@ const HDB = {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches, { GROUND, TOP } = this.geo, H = GROUND - TOP + 40;
     const light = k => { const w = this.wins[k], i = streamOf[k], col = css(MAP_STREAMS[i][2]);
       w.el.setAttribute('fill', col); w.el.setAttribute('filter', 'url(#hdbGlow)'); w.el.classList.add('lit'); this.litCount[i]++; onLight(i); };
-    if (reduce) { this.clipRect.setAttribute('y', 0); this.clipRect.setAttribute('height', GROUND + 10); streamOf.forEach((_, k) => light(k)); onDone(); return; }
-    // 0-1.2 s: build up from the ground
-    const t0 = performance.now(), grow = now => { const p = Math.min(1, (now - t0) / 1200), e = 1 - Math.pow(1 - p, 3);
-      this.clipRect.setAttribute('y', GROUND + 10 - (H + 10) * e); this.clipRect.setAttribute('height', (H + 10) * e); if (p < 1) this.raf = requestAnimationFrame(grow); };
-    this.raf = requestAnimationFrame(grow);
+    this.clipRect.setAttribute('y', 0); this.clipRect.setAttribute('height', GROUND + 10);
+    if (reduce) { this.g.style.opacity = 1; streamOf.forEach((_, k) => light(k)); onDone(); return; }
+    // 0-1.2 s: the block fades in
+    this.g.style.opacity = 0;
+    const t0 = performance.now(), fade = now => { const p = Math.min(1, (now - t0) / 1200);
+      this.g.style.opacity = p * p * (3 - 2 * p); if (p < 1) this.raf = requestAnimationFrame(fade); };
+    this.raf = requestAnimationFrame(fade);
     // 1.2-5.4 s: windows light one by one (small random jitter so it feels like an estate at dusk)
     const nL = streamOf.length;
     streamOf.forEach((_, k) => this.timers.push(setTimeout(() => light(k), 1200 + (nL > 1 ? k / (nL - 1) : 0) * 4200 + ((k * 37) % 7 - 3) * 18)));
@@ -1554,14 +1581,60 @@ function drawStreams() {
    ========================================================================== */
 const CL_COLORS = ['--c1', '--c2', '--c3', '--c4', '--c5', '--teal'];
 let clTimer = null;
+// Plain names for the town labels, and what each kind of group means for a moving company
+const shortTown = n => ({ 'KALLANG/WHAMPOA': 'Kallang', 'CENTRAL AREA': 'Central', 'CHOA CHU KANG': 'Choa Chu Kang' }[n] || titleCase(n));
+const CL_MEANING = {
+  'Family-size flats': 'Mostly 4-room and bigger flats: larger, higher-value jobs; send bigger trucks and full crews.',
+  'Rental hotspots': 'Older, central towns where many flats are rented out: frequent, smaller moves; suits quick-turnaround crews.',
+  'Fast-growing': 'Resales growing fastest since 2017–19: demand is building; worth marketing here early.',
+  'MOP wave coming': 'Many flats built 2021–26 reach MOP by 2031: tomorrow\'s busiest towns; keep a depot within reach.',
+  'High churn': 'Flats change hands most often today: a steady stream of resale moves.',
+  'Steady mature': 'Close to average on every score: steady, predictable demand.' };
+// Faint Singapore outline behind the town bubbles (region shapes, converted back to lon/lat)
+const sgOutlinePlugin = {
+  id: 'sgOutline',
+  beforeDatasetsDraw(chart, _, opts) {
+    if (!opts || !opts.enabled) return;
+    const { ctx, chartArea: ca, scales: { x, y } } = chart, cs = Math.cos(1.35 * Math.PI / 180);
+    ctx.save(); ctx.beginPath(); ctx.rect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top); ctx.clip(); ctx.fillStyle = '#EFE9DF'; ctx.strokeStyle = '#FBF8F3'; ctx.lineWidth = 1.5;
+    for (const r of DATA.regionsSvg) {
+      ctx.beginPath();
+      for (const ring of r.d.split('Z')) {
+        const pts = ring.replace('M', '').split('L').filter(Boolean).map(p => p.split(',').map(Number));
+        pts.forEach(([px, py], i) => { const X = x.getPixelForValue(px / (cs * 1000) + 103.59), Y = y.getPixelForValue(1.475 - py / 1000); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+        if (pts.length) ctx.closePath();
+      }
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+};
+// Keep the map's true proportions: widen the longitude (or latitude) range to match the plot box,
+// so Singapore is never stretched whatever the screen size.
+const geoAspectPlugin = {
+  id: 'geoAspect',
+  afterLayout(chart, _, o) {
+    if (!o || !o.enabled) return;
+    const a = chart.chartArea, w = a.right - a.left, h = a.bottom - a.top; if (w < 10 || h < 10) return;
+    const cs = Math.cos(1.35 * Math.PI / 180); let [lon0, lon1] = o.lon, [lat0, lat1] = o.lat;
+    const needLon = (lat1 - lat0) * w / h / cs;
+    if (needLon >= lon1 - lon0) { const c = (lon0 + lon1) / 2; lon0 = c - needLon / 2; lon1 = c + needLon / 2; }
+    else { const needLat = (lon1 - lon0) * cs * h / w, c = (lat0 + lat1) / 2; lat0 = c - needLat / 2; lat1 = c + needLat / 2; }
+    const sx = chart.options.scales.x, sy = chart.options.scales.y;
+    if ([sx.min - lon0, sx.max - lon1, sy.min - lat0, sy.max - lat1].some(d => Math.abs(d) > 1e-7)) {
+      Object.assign(sx, { min: lon0, max: lon1 }); Object.assign(sy, { min: lat0, max: lat1 }); chart.update('none'); }
+  }
+};
+Chart.register(sgOutlinePlugin, geoAspectPlugin);
 function renderClusters(animate = true) {
   const k = +$('#kIn').value, nd = +$('#dIn').value; $('#kOut').textContent = k; $('#dOut').textContent = nd;
   const res = CL.best(CL.X, k), names = CL.nameClusters(res);
   const dep = CL.best(CL.geo, nd, CL.rows.map(r => r.jobs));      // depots: weighted by estimated moves
-  const radius = CL.rows.map(r => 5 + Math.sqrt(r.units) / 28);
+  const sz = Math.max(0.55, Math.min(1, $('#cMap').parentElement.clientWidth / 760));       // smaller bubbles on small screens
+  const radius = CL.rows.map(r => (5 + Math.sqrt(r.units) / 28) * sz);
   const mkData = labels => Array.from({ length: k }, (_, j) => ({
     label: names[j], data: CL.rows.map((r, i) => labels[i] === j ? { x: r.lon, y: r.lat } : null).filter(Boolean),
-    labels: CL.rows.filter((_, i) => labels[i] === j).map(r => r.code),
+    labels: CL.rows.filter((_, i) => labels[i] === j).map(r => shortTown(r.name)),
     pointRadius: CL.rows.map((_, i) => radius[i]).filter((_, i) => labels[i] === j),
     backgroundColor: alpha(css(CL_COLORS[j]), 0.55), borderColor: css(CL_COLORS[j]), borderWidth: 2 }));
   const depotDs = { label: 'Depot', type: 'scatter', pointStyle: 'rectRot', pointRadius: 11, backgroundColor: '#1E3537', borderColor: '#fff', borderWidth: 2,
@@ -1570,10 +1643,15 @@ function renderClusters(animate = true) {
     const ds = [...mkData(labels), depotDs];
     if (C.map) { C.map.data.datasets = ds; C.map.update(); return; }
     C.map = new Chart($('#cMap'), { type: 'scatter', data: { datasets: ds },
-      options: { plugins: { pointLabels: { enabled: true }, legend: { position: 'bottom' },
-        tooltip: { callbacks: { label: i => { const ds = i.dataset; if (ds.label === 'Depot') return 'Depot site'; const r = CL.rows.find(r => r.code === ds.labels[i.dataIndex]);
-          return `${r.name}: resold ${r.resold.toFixed(1)}%/yr, MOP soon ${r.mopSoon.toFixed(0)}%, rented ${r.rented.toFixed(1)}%/yr`; } } } },
-        scales: { x: { display: false, min: 103.68, max: 103.99 }, y: { display: false, min: 1.26, max: 1.47 } } } });
+      options: { maintainAspectRatio: false,
+      // towns and depots fade in where they are (no sliding up from the bottom of the chart)
+      animations: { x: { duration: 0 }, y: { duration: 0 }, radius: { duration: 0 }, borderWidth: { duration: 0 },
+        colors: { type: 'color', properties: ['borderColor', 'backgroundColor'], from: 'transparent', duration: 650, easing: 'easeOutQuad' } },
+      plugins: { sgOutline: { enabled: true }, geoAspect: { enabled: true, lon: [103.615, 104.03], lat: [1.25, 1.465] }, pointLabels: { enabled: true },
+        legend: { position: 'bottom', labels: { padding: 26, boxWidth: 10, font: { size: 13 } } },
+        tooltip: { callbacks: { label: i => { const ds = i.dataset; if (ds.label === 'Depot') return 'Depot site'; const r = CL.rows.find(r => shortTown(r.name) === ds.labels[i.dataIndex]);
+          return [`${shortTown(r.name)} (${ds.label})`, `resold ${r.resold.toFixed(1)}% a year · MOP by 2031 ${r.mopSoon.toFixed(0)}%`, `rented out ${r.rented.toFixed(1)}% a year · 4-room+ ${r.big.toFixed(0)}%`]; } } } },
+        scales: { x: { display: false, min: 103.66, max: 104.0 }, y: { display: false, min: 1.255, max: 1.465 } } } });
   };
   clearInterval(clTimer);
   if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -1584,16 +1662,17 @@ function renderClusters(animate = true) {
   $('#clusterTable tbody').innerHTML = names.map((n, j) => {
     const mem = CL.rows.filter((_, i) => res.labels[i] === j);
     const avg = f => mean(mem.map(r => r[f]));
-    return `<tr><td><span class="swatch" style="background:${css(CL_COLORS[j])}"></span>${n}<div class="note" style="margin:0">${mem.map(r => r.code).join(', ')}</div></td>
-      <td class="num">${mem.length}</td><td class="num">${avg('resold').toFixed(1)}</td><td class="num">${avg('mopSoon').toFixed(0)}</td><td class="num">${avg('rented').toFixed(1)}</td></tr>`;
+    return `<tr><td><span class="swatch" style="background:${css(CL_COLORS[j])}"></span><b>${n}</b><div style="font-size:13px;color:var(--ink-2);margin:2px 0">${CL_MEANING[n] || ''}</div><div class="note" style="margin:0">${mem.map(r => shortTown(r.name)).join(', ')}</div></td>
+      <td class="num">${mem.length}</td><td class="num">${avg('resold').toFixed(1)}%</td><td class="num">${avg('mopSoon').toFixed(0)}%</td><td class="num">${avg('rented').toFixed(1)}%</td></tr>`;
   }).join('');
   // elbow + silhouette
   const ks = [2, 3, 4, 5, 6], inert = ks.map(kk => CL.best(CL.X, kk).inertia), sils = ks.map(kk => CL.silhouette(CL.X, CL.best(CL.X, kk).labels));
-  $('#silNote').textContent = `Silhouette score (higher = cleaner groups): ${ks.map((kk, i) => `k=${kk}: ${sils[i].toFixed(2)}`).join(' · ')}. Within-cluster spread falls fastest up to k=${ks[sils.indexOf(Math.max(...sils))]}.`;
+  const bestK = ks[sils.indexOf(Math.max(...sils))];
+  $('#silNote').innerHTML = `<b>${bestK} groups fit best.</b> The line shows how different towns inside the same group still are: it drops steeply up to ${bestK} groups, then flattens, so more groups add little. ${bestK} groups also give the cleanest split between groups (silhouette score ${Math.max(...sils).toFixed(2)}, the highest; scores: ${ks.map((kk, i) => `${kk}: ${sils[i].toFixed(2)}`).join(', ')}).${k !== bestK ? ` You are viewing ${k} groups.` : ''}`;
   if (!C.elbow) C.elbow = new Chart($('#cElbow'), { type: 'line',
     data: { labels: ks, datasets: [{ data: inert, borderColor: css('--teal'), backgroundColor: css('--teal'), pointRadius: ks.map(kk => kk === k ? 7 : 4), tension: 0.2 }] },
-    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { title: i => `k = ${i[0].label}`, label: i => `Within-cluster spread ${i.raw.toFixed(1)}` } } },
-      scales: { x: { grid: NOGRID, title: { display: true, text: 'k (clusters)' } }, y: { grid: GRID, title: { display: true, text: 'Spread' } } } } });
+    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { title: i => `${i[0].label} groups`, label: i => `Difference within groups: ${i.raw.toFixed(1)}` } } },
+      scales: { x: { grid: NOGRID, title: { display: true, text: 'Number of groups' } }, y: { grid: GRID, title: { display: true, text: 'Difference within groups' } } } } });
   else { C.elbow.data.datasets[0].pointRadius = ks.map(kk => kk === k ? 7 : 4); C.elbow.update(); }
 }
 
@@ -1633,6 +1712,33 @@ function renderBacktest() {
 /* ==========================================================================
    14. FLOOR 4: five-year fan + MOP pipeline
    ========================================================================== */
+// ---- "What happened that year" dialog, opened by clicking a year on the resale charts ----
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function openYearDialog(y) {
+  if (y < 1990 || y > 2026) return;
+  const m = MODEL, sh = m.shocks, res = m.annual(y), prev = y > 1990 ? m.annual(y - 1) : null;
+  const rules = IND.pol.filter(r => r[0] === y), carry = IND.pol.filter(r => r[0] === y - 1 && r[1] >= 7);
+  const g = IND.gdp[y], rec = g != null && g < 1, imp = policyImpulse(y), mood = (sh.Mlong[y] / sh.eraMean(y) - 1);
+  const tag = v => `<span class="tag" style="background:${v > 0 ? css('--c1') : css('--c2')}">${v > 0 ? '▲ opened up' : '▼ tightened'}${Math.abs(v) === 1 ? '' : ' (minor)'}</span>`;
+  const li = (r, note = '') => `<li>${tag(r[2])}<span><b>${MONTHS[r[1] - 1]} ${r[0]}:</b> ${r[3]}${note}</span></li>`;
+  let story = '';
+  if (rules.length) story += `<h4 style="margin:14px 0 0">Rule changes in ${y}</h4><ul>${rules.map(r => li(r)).join('')}</ul>`;
+  if (carry.length) story += `<h4 style="margin:10px 0 0">Still feeding through from late ${y - 1}</h4><ul>${carry.map(r => li(r, ' <span style="color:var(--ink-3)">(half its effect lands this year)</span>')).join('')}</ul>`;
+  if (!rules.length && !carry.length) story += `<p style="margin-top:14px">No major rule change took effect in ${y}. The level of resales came from how many flats were reaching MOP and from the market mood${rec ? ', in a recession year' : ''}.</p>`;
+  if (rec) story += `<p><b>Recession year</b> (real GDP ${g > 0 ? '+' : ''}${g}%). Over 36 years, recession years had about ${pct(Math.exp(sh.bRec) - 1)} more HDB resales than otherwise expected: households sell to downsize or free up cash, and softer prices bring buyers in.</p>`;
+  if (y >= 2010 && y <= 2013) story += `<p style="color:var(--ink-2)">Part of the <b>2010–13 cooling measures</b>. After them, older flats are resold about a third less often, so the forecast treats 2011 onwards as a new era.</p>`;
+  if (imp) story += `<p style="color:var(--ink-2)">Model estimate: the rule changes landing in ${y} moved resales by about <b>${(Math.exp(sh.bPol * imp) - 1 >= 0 ? '+' : '−') + pct(Math.abs(Math.exp(sh.bPol * imp) - 1), 1)}</b> that year, fading over the following years.</p>`;
+  $('#ymBody').innerHTML = `<p style="margin:0;color:var(--ink-3);font-size:14px">HDB resale market</p><h3 id="ymTitle">${y}</h3>
+    <div class="ym-kpis">
+      <div class="kpi"><b>${fmt(Math.round(res))}</b><span>HDB resales${y === 2026 ? ' (Jan–Sep, annualised)' : ''}</span></div>
+      ${prev ? `<div class="kpi"><b>${res >= prev ? '+' : '−'}${pct(Math.abs(res / prev - 1))}</b><span>vs ${y - 1}</span></div>` : ''}
+      <div class="kpi"><b>${mood >= 0 ? '+' : '−'}${pct(Math.abs(mood))}</b><span>vs normal for its era (market mood)</span></div>
+      ${g != null ? `<div class="kpi"><b>${g > 0 ? '+' : ''}${g}%</b><span>real GDP growth${rec ? ' (recession)' : ''}</span></div>` : ''}
+    </div>${story}
+    <p class="note" style="margin-top:10px">Rule changes: LKY School case study, URA/MND/HDB announcements (sources on floor 9). GDP: SingStat. Effects are estimated from 1991–2025 (floor 5).</p>`;
+  const back = $('#yearModal'); back.hidden = false; $('#ymClose').focus({ preventScroll: true });
+}
+function closeYearDialog() { $('#yearModal').hidden = true; }
 function renderOutlook(sc) {
   const m = MODEL;
   // history: estimated market moves per year 2007-2025 (four streams; all on record from 2007)
@@ -1668,13 +1774,21 @@ function renderOutlook(sc) {
     { type: 'bar', label: 'Resales per year', data: histL, backgroundColor: yrsL.map(y => y <= 2010 ? '#E2DBCF' : '#B7AE9F'), borderRadius: 3, order: 3 },
     { label: '90th percentile', data: padF(r90), borderColor: 'transparent', pointRadius: 0, fill: false, order: 2 },
     { label: '10–90% range', data: padF(r10), borderColor: 'transparent', backgroundColor: alpha(css('--c1'), 0.22), pointRadius: 0, fill: '-1', order: 2 },
-    { label: 'Median forecast', data: padF(r50), borderColor: css('--c1'), backgroundColor: css('--c1'), pointRadius: 3, borderWidth: 2.5, order: 1 }] };
+    { label: 'Median forecast', data: padF(r50), borderColor: css('--c1'), backgroundColor: css('--c1'), pointRadius: 3, borderWidth: 2.5, order: 1 },
+    // rule changes: triangle above the bar (green up = opened, coral down = tightened; net direction if several)
+    { label: 'Rule change (click the year)', data: yrsL.map(y => { const r = IND.pol.filter(p => p[0] === y); return r.length && y <= 2026 ? m.annual(y) + 2600 : null; }),
+      showLine: false, pointStyle: 'triangle', pointRadius: 7, pointHoverRadius: 9, order: 0,
+      rotation: yrsL.map(y => IND.pol.filter(p => p[0] === y).reduce((a, p) => a + p[2], 0) < 0 ? 180 : 0),
+      backgroundColor: yrsL.map(y => IND.pol.filter(p => p[0] === y).reduce((a, p) => a + p[2], 0) < 0 ? css('--c2') : css('--c1')), borderColor: '#fff', borderWidth: 1.5 }] };
   if (C.long) { C.long.data = ldata; C.long.update(); }
   else C.long = new Chart($('#cLong'), { type: 'line', data: ldata,
     options: { interaction: { mode: 'index', intersect: false },
+      onClick: (ev, _, chart) => { const i = chart.scales.x.getValueForPixel(ev.x); if (i != null) openYearDialog(1990 + Math.round(i)); },
+      onHover: (ev, els, chart) => { const i = Math.round(chart.scales.x.getValueForPixel(ev.x)); chart.canvas.style.cursor = i >= 0 && 1990 + i <= 2026 ? 'pointer' : 'default'; },
       plugins: { legend: { position: 'bottom', labels: { filter: l => l.text !== '90th percentile' } },
         marks: { lines: [{ at: 20.5, dash: [4, 4], color: '#9C9385', label: 'rules tighten 2010–13' }] },
-        tooltip: { callbacks: { label: i => i.raw == null ? null : `${i.dataset.label}: ${fmt(i.raw)}` } } },
+        tooltip: { filter: i => i.raw != null && !i.dataset.label.startsWith('Rule'), callbacks: { label: i => `${i.dataset.label}: ${fmt(i.raw)}`,
+          footer: it => { const y = 1990 + it[0].dataIndex; const r = IND.pol.filter(p => p[0] === y); return y > 2026 ? '' : (r.length ? `${r.length} rule change${r.length > 1 ? 's' : ''} this year · click for details` : 'Click for details'); } } } },
       scales: { x: { grid: NOGRID, ticks: { maxTicksLimit: 12 } }, y: { grid: GRID, ticks: { callback: v => fmtK(v) }, title: { display: true, text: 'HDB resales per year' } } } } });
   // MOP pipeline bars: completions 5 years earlier
   const ys = [2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031];
@@ -1702,7 +1816,7 @@ function renderNewsvendor(results) {
   const chips = $('#nvYearChips');
   if (!chips.children.length) [0, 1, 2, 3, 4].forEach(k => {
     const b = document.createElement('button'); b.className = 'chip'; b.textContent = 2027 + k; b.setAttribute('aria-pressed', k === nvYear);
-    b.onclick = () => { nvYear = k; [...chips.children].forEach((c, j) => c.setAttribute('aria-pressed', j === k)); renderNewsvendor(LAST.results); };
+    b.onclick = () => { nvYear = k; [...chips.children].forEach((c, j) => c.setAttribute('aria-pressed', j === k)); ChangeFX.wrap($('#f5'), () => renderNewsvendor(LAST.results)); };
     chips.appendChild(b);
   });
   // histogram of monthly demand in the chosen year (phased uses the full-share demand)
@@ -1782,7 +1896,7 @@ function renderROI(results) {
   const chips = $('#roiChips');
   if (!chips.children.length) STRATS.forEach(s => {
     const b = document.createElement('button'); b.className = 'chip'; b.textContent = s.name; b.setAttribute('aria-pressed', s.id === roiId);
-    b.onclick = () => { roiId = s.id; [...chips.children].forEach((c, j) => c.setAttribute('aria-pressed', STRATS[j].id === roiId)); renderROI(LAST.results); renderTornado(); renderScenarioTable(); renderRecommendation(LAST.results); };
+    b.onclick = () => { roiId = s.id; [...chips.children].forEach((c, j) => c.setAttribute('aria-pressed', STRATS[j].id === roiId)); ChangeFX.wrap(document.querySelector('main'), () => { renderROI(LAST.results); renderTornado(); renderScenarioTable(); renderRecommendation(LAST.results); }); };
     chips.appendChild(b);
   });
   const r = results[roiId], s = STRATS.find(x => x.id === roiId), col = css(s.color);
@@ -1866,6 +1980,8 @@ function renderShocks() {
   if (C.shock) { C.shock.data = data; C.shock.update(); return; }
   C.shock = new Chart($('#cShock'), { data,
     options: { interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+      onClick: (ev, _, chart) => { const i = chart.scales.x.getValueForPixel(ev.x); if (i != null) openYearDialog(1990 + Math.round(i)); },
+      onHover: (ev, els, chart) => { chart.canvas.style.cursor = 'pointer'; },
       plugins: { legend: { position: 'bottom' }, marks: { lines: [{ at: 20.5, dash: [4, 4], color: '#9C9385', label: 'new era 2011' }] },
         tooltip: { filter: i => i.raw != null, callbacks: {
           label: i => i.dataset.notes ? i.dataset.notes[i.dataIndex] : i.dataset.yAxisID === 'y2' ? `GDP growth ${i.raw}%${sh.recOf(+i.label) ? ' (recession)' : ''}` : `Mood ${i.raw > 0 ? '+' : ''}${i.raw.toFixed(0)}% vs era normal` } } },
@@ -2116,7 +2232,7 @@ function updateMap(fromSelect = false) {
     targets[r.key] = { h: MAP_STREAMS.map(([sk]) => selRegion || change ? 0 : (MAP_ON[sk] ? d[sk] * k : 0)),
       label: selRegion ? '' : change ? chgLabel(regionChange(r.key)) : fmtK(d.total), hidden: !!selRegion }; });
   animateBars(targets); applyFills();
-  if (!fromSelect) { renderDetail(selRegion); if (selRegion) animatePAs(false); }
+  if (!fromSelect) { ChangeFX.wrap($('#detail'), () => renderDetail(selRegion)); if (selRegion) animatePAs(false); }
 }
 // Smoothly move the SVG viewBox (zoom/pan)
 function tweenViewBox(to, dur = 750) {
@@ -2467,7 +2583,52 @@ function openMap() { document.body.classList.add('on-map'); window.scrollTo(0, 0
    19. ORCHESTRATION: run everything, redraw on assumption changes
    ========================================================================== */
 const LAST = {};
+/* ==========================================================================
+   CHANGE ANIMATION: whenever a slider, chip or dropdown changes the numbers,
+   every number that changed counts from its old value to its new one and
+   flashes (with a small ▲/▼ for the direction). Charts animate their own
+   transitions (Chart.js). Works by snapshotting the text of numbers, table
+   cells and titles before a re-render and comparing afterwards, matched by
+   their position in the page.
+   ========================================================================== */
+const ChangeFX = {
+  SEL: '.kpi b, td, h2, h3[id], .lede, #crBox b, .block-head, #silNote, #scenNote, #shockNote, #recBox li, .streamrows .num',
+  NUM: /[−-]?\d[\d,]*(?:\.\d+)?/g,
+  path(el, root) { const p = []; while (el && el !== root) { const par = el.parentElement; if (!par) break; p.unshift(el.tagName + ':' + [...par.children].indexOf(el)); el = par; } return p.join('>'); },
+  snap(root) { const m = new Map(); if (root) root.querySelectorAll(this.SEL).forEach(el => m.set(this.path(el, root), el.textContent)); return m; },
+  val: t => parseFloat(t.replace('−', '-').replace(/,/g, '')),
+  apply(root, before) {
+    if (!root || !before || !before.size) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    root.querySelectorAll(this.SEL).forEach(el => {
+      const old = before.get(this.path(el, root)), now = el.textContent;
+      if (old == null || old === now) return;
+      if (el.querySelector('td, li, .kpi')) return;                    // let the inner elements animate
+      const oN = old.match(this.NUM) || [], nN = now.match(this.NUM) || [];
+      const same = oN.length === nN.length && old.replace(this.NUM, '#') === now.replace(this.NUM, '#');
+      let dir = '';
+      if (same) { const i = nN.findIndex((t, k) => t !== oN[k]); if (i >= 0) dir = this.val(nN[i]) > this.val(oN[i]) ? '▲' : '▼'; }
+      // count from the old numbers to the new ones (only plain-text elements, so markup is kept)
+      if (same && !reduce && el.children.length === 0) {
+        const from = oN.map(this.val), to = nN.map(this.val), dec = nN.map(t => (t.split('.')[1] || '').length);
+        const minus = nN.map(t => t.startsWith('−') ? '−' : '-'), comma = nN.map(t => t.includes(','));
+        const fmtN = (v, k) => { const a = Math.abs(v), s = comma[k] ? a.toLocaleString('en-SG', { minimumFractionDigits: dec[k], maximumFractionDigits: dec[k] }) : a.toFixed(dec[k]); return (v < 0 ? minus[k] : '') + s; };
+        const t0 = performance.now(), dur = 700;
+        const step = t => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); let k = 0;
+          el.textContent = now.replace(this.NUM, () => { const v = from[k] + (to[k] - from[k]) * e, out = fmtN(v, k); k++; return out; });
+          if (p < 1) requestAnimationFrame(step); else el.textContent = now; };
+        el.textContent = old; requestAnimationFrame(step);
+      }
+      el.classList.remove('fx-chg'); void el.offsetWidth;            // restart the flash
+      if (dir) el.dataset.fx = dir; else delete el.dataset.fx;
+      el.classList.add('fx-chg'); clearTimeout(el._fx); el._fx = setTimeout(() => { el.classList.remove('fx-chg'); delete el.dataset.fx; }, 2500);
+    });
+  },
+  // run a re-render and animate whatever changed inside root
+  wrap(root, fn) { const b = this.snap(root); const r = fn(); this.apply(root, b); return r; }
+};
 function recompute() {
+  const main = document.querySelector('main'), before = LAST.results ? ChangeFX.snap(main) : null;   // nothing to compare on the first run
   if ($('#ntOut')) $('#ntOut').textContent = pct(A.newTenancy);
   const sc = genScenarios(A);
   // With a forced shock selected on floor 5, the fleet is still planned from the normal
@@ -2479,6 +2640,7 @@ function recompute() {
   renderOutlook(sc); renderShocks(); renderScenarioTable(); renderNewsvendor(results); renderRisk(results); renderROI(results); renderRecommendation(results); renderTornado();
   updateMap();
   drawStreams();
+  ChangeFX.apply(main, before);
 }
 function buildDrawer() {
   const box = $('#sliders');
@@ -2524,11 +2686,14 @@ function buildLift() {
 buildMap();
 requestAnimationFrame(() => updateMap());           // bars rise on load; the panel shows all of Singapore
 function startAnalysis() {
+  $('#ymClose').onclick = closeYearDialog;
+  $('#yearModal').addEventListener('click', e => { if (e.target.id === 'yearModal') closeYearDialog(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#yearModal').hidden) closeYearDialog(); });
   buildLift(); buildDrawer();
   renderHero(); renderFloor1(); renderBacktest();
   renderClusters(false);
-  $('#kIn').addEventListener('input', () => renderClusters(true));
-  $('#dIn').addEventListener('input', () => renderClusters(false));
+  $('#kIn').addEventListener('input', () => ChangeFX.wrap($('#f2'), () => renderClusters(true)));
+  $('#dIn').addEventListener('input', () => ChangeFX.wrap($('#f2'), () => renderClusters(false)));
   $('#rerunK').onclick = () => renderClusters(true);
   recompute();
   // Replay the k-means animation the first time floor 2 scrolls into view
