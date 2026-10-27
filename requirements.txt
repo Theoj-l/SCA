@@ -1,0 +1,10 @@
+# Installed automatically by `python run.py`. Runs the notebook in VS Code (Jupyter extension) or any Jupyter front end.
+# Full `jupyter`/`jupyterlab` is left out on purpose: it fails on Windows without long-path support.
+numpy
+pandas
+matplotlib
+jinja2          # pandas needs it for the formatted result tables
+requests        # only if USE_LIVE_DATA = True in the notebook (re-download from data.gov.sg)
+ipykernel       # lets VS Code run the notebooks in this environment
+nbformat        # used by `python run.py notebook` to run the notebook from the command line
+nbclient
