@@ -198,15 +198,11 @@ select:disabled{opacity:.45;cursor:default}
 .hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center}
 .hero h1{font-size:clamp(44px,6.4vw,92px);font-weight:800;letter-spacing:-0.02em;max-width:11ch}
 .hero .sub{font-size:21px;color:var(--ink-2);max-width:34ch;margin-top:18px}
-.block{justify-self:center;width:min(420px,100%);background:linear-gradient(var(--mint) 0 18%, #F4EFE6 18% 100%);
-  border-radius:14px 14px 4px 4px;padding:26px 22px 0;position:relative;box-shadow:inset 0 -14px 0 #E2D9CA}
-.block .blk{position:absolute;top:6px;right:16px;font-family:var(--display);font-weight:800;font-size:22px;color:#fff}
-.windows{display:grid;grid-template-columns:repeat(8,1fr);gap:7px}
-.win{aspect-ratio:3/4;border-radius:4px;background:#D9D1C3;transition:background .6s ease, box-shadow .6s ease}
-.win.lit{background:var(--butter);box-shadow:0 0 10px rgba(255,217,142,.9)}
-.win.mop{background:var(--coral);box-shadow:0 0 10px rgba(247,168,160,.9)}
-.voiddeck{height:58px;margin:12px -22px 0;display:flex;justify-content:space-around;align-items:flex-end;border-top:6px solid #DCD2C2}
-.voiddeck i{width:14px;height:52px;background:#E8E0D2;border-radius:3px 3px 0 0;display:block}
+.hdb{justify-self:center;display:block;width:min(430px,100%);height:auto;cursor:pointer;overflow:visible}
+.hdb .w{transition:fill .45s ease}
+.hdb .w.lit{animation:flick .55s ease-out}
+@keyframes flick{0%{opacity:.25}35%{opacity:1}55%{opacity:.6}100%{opacity:1}}
+.hdb .blkno{font-family:var(--display);font-weight:800;fill:#fff}
 .block-head{margin:14px 0 0;font-size:15px;color:var(--ink-2)}
 .block-head b{font-family:var(--display);color:var(--ink);font-size:17px}
 .legend-line{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--ink-2);margin-top:12px}
@@ -282,6 +278,8 @@ td.up{color:#167A5D;font-weight:700} td.down{color:#B4432F;font-weight:700}
 #sgmap .pa:hover{filter:saturate(1.35) brightness(.95)}
 #sgmap .pa.focus{stroke:var(--ink);stroke-width:2.6;filter:saturate(1.4) brightness(.93)}
 #sgmap .pa-layer{transition:opacity .45s}
+#sgmap .pa-layer g{transition:opacity .35s}
+#sgmap .pa-layer g.dimmed{opacity:.28}
 #sgmap .pa.ctx{cursor:default}
 #sgmap .pa.ctx:hover{filter:brightness(.97)}
 #sgmap .ctxname{font-family:var(--body);font-style:italic;fill:#5E7273;paint-order:stroke;stroke:#FBF8F3;stroke-linejoin:round;pointer-events:none}
@@ -428,11 +426,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     <p class="note" style="margin-top:18px">Use the lift on the left, or the arrow keys, to go floor by floor.</p>
   </div>
   <div>
-    <div class="block" aria-hidden="true">
-      <span class="blk">Blk 2027</span>
-      <div class="windows" id="windows"></div>
-      <div class="voiddeck"><i></i><i></i><i></i><i></i><i></i></div>
-    </div>
+    <svg class="hdb" id="hdb" viewBox="0 0 400 560" role="img" aria-label="A modern HDB block whose windows light up: one window per 2,500 estimated moves in 2025, coloured by type of move. Click to replay."></svg>
     <div id="blockKey"></div>
   </div>
 </section>
@@ -1374,22 +1368,114 @@ function renderHero(sc) {
     <div class="kpi"><b data-count="${mop2027}">0</b><span>HDB flats reach MOP in 2027</span></div>
     <div class="kpi"><b data-count="${sum(m.natLong)}">0</b><span>HDB resales analysed since 1990</span></div>`;
   countUp($('#heroKpis'));
-  // Facade = a stacked bar drawn as a block of flats: one lit window per 2,500 estimated moves
-  // in 2025, coloured by where the move comes from (same colours as the map). Windows are
+  // Facade = a stacked bar drawn as a modern HDB block: one lit window per 2,500 estimated
+  // moves in 2025, coloured by where the move comes from (same colours as the map). Windows are
   // shared out by largest remainder so they add up to the rounded total.
-  const PER = 2500, total = 8 * 9, j = jobsYear(2025);
-  const want = MAP_STREAMS.map(([k]) => j[k] / PER), n = Math.min(total, Math.round(sum(want)));
+  const PER = 2500, COLS = 8, FLOORS = 9, j = jobsYear(2025);
+  const want = MAP_STREAMS.map(([k]) => j[k] / PER), n = Math.min(COLS * FLOORS, Math.round(sum(want)));
   const cnt = want.map(Math.floor); want.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]).slice(0, n - sum(cnt)).forEach(([, i]) => cnt[i]++);
-  const colours = MAP_STREAMS.flatMap(([, , col], i) => Array(cnt[i]).fill(css(col)));
-  const wrap = $('#windows'); wrap.innerHTML = '';
-  const wins = Array.from({ length: total }, () => { const d = document.createElement('div'); d.className = 'win'; wrap.appendChild(d); return d; });
-  // light from the ground floor up, left to right, like a stacked bar growing
-  const order = wins.map((_, i) => i).sort((a, b) => (Math.floor(b / 8) - Math.floor(a / 8)) || (a % 8 - b % 8));
-  order.slice(0, n).forEach((i, k) => setTimeout(() => { const w = wins[i]; w.classList.add('lit'); w.style.background = colours[k]; w.style.boxShadow = `0 0 10px ${alpha(colours[k], 0.55)}`; }, 250 + k * 35));
-  $('#blockKey').innerHTML = `<p class="block-head"><b>1 window = ${fmt(PER)} moves</b> · ${n} lit = ${fmt(Math.round(j.res + j.rent + j.bto + j.priv))} estimated moves in 2025</p>
-    <div class="legend-line">${MAP_STREAMS.map(([k, name, col], i) => `<span><span class="swatch" style="background:${css(col)}"></span>${name} ${fmt(Math.round(j[k] / 100) * 100)} <span style="color:var(--ink-3)">(${cnt[i]})</span></span>`).join('')}
-    <span><span class="swatch" style="background:#D9D1C3"></span>Empty: room left in the block</span></div>`;
+  const streamOf = MAP_STREAMS.flatMap((_, i) => Array(cnt[i]).fill(i));
+  HDB.build(COLS, FLOORS);
+  // legend: counters fill up as the windows light
+  $('#blockKey').innerHTML = `<p class="block-head" id="hdbHead" style="opacity:0;transition:opacity .6s"><b>1 window = ${fmt(PER)} moves</b> · ${n} lit = ${fmt(Math.round(j.res + j.rent + j.bto + j.priv))} estimated moves in 2025</p>
+    <div class="legend-line">${MAP_STREAMS.map(([k, name, col], i) => `<span><span class="swatch" style="background:${css(col)}"></span>${name} <b class="hdbN" data-i="${i}" style="font-weight:600">0</b> <span style="color:var(--ink-3)">(<span class="hdbW" data-i="${i}">0</span>)</span></span>`).join('')}
+    <span><span class="swatch" style="background:#B9C6C6"></span>Unlit: room left in the block</span></div>`;
+  const play = () => HDB.play(streamOf, i => { const lit = HDB.litCount[i];
+      document.querySelector(`.hdbN[data-i="${i}"]`).textContent = fmt(Math.round(j[MAP_STREAMS[i][0]] * lit / cnt[i] / 100) * 100);
+      document.querySelector(`.hdbW[data-i="${i}"]`).textContent = lit; },
+    () => { $('#hdbHead').style.opacity = 1; });
+  // Start once the block is on screen (and after the page's heavy start-up work, so the 6 s
+  // timeline is not squeezed); click the block to replay.
+  $('#hdb').onclick = play;
+  HDB.prime();
+  if (HDB.io) HDB.io.disconnect();
+  HDB.io = new IntersectionObserver((es, obs) => es.forEach(e => { if (e.isIntersecting) { obs.disconnect(); setTimeout(() => requestAnimationFrame(play), 150); } }), { threshold: 0.35 });
+  setTimeout(() => HDB.io.observe($('#hdb')), 0);
 }
+/* ==========================================================================
+   The HDB block on the opening floor (inline SVG, drawn by code)
+   Modern point-block look: lift core with louvres and block number, two-tone
+   facade with floor slabs, planter ledges and fins, rooftop garden and
+   pergola, void deck with pillars. Animation, 6 s in total:
+     0.0-1.2 s  the block "builds" upward (clip from the ground)
+     1.2-5.4 s  windows light from the ground floor up, in stream order
+     5.4-6.0 s  the caption fades in
+   ========================================================================== */
+const HDB = {
+  litCount: [0, 0, 0, 0], timers: [],
+  build(COLS, FLOORS) {
+    const svg = $('#hdb'), NS = 'http://www.w3.org/2000/svg', E = (t, a = {}, p = svg) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
+    svg.innerHTML = '';
+    const X0 = 96, X1 = 362, TOP = 60, FH = 44, BASE = TOP + FLOORS * FH, GROUND = BASE + 58;
+    this.geo = { BASE, GROUND, TOP };
+    const defs = E('defs');
+    const glow = E('filter', { id: 'hdbGlow', x: '-60%', y: '-60%', width: '220%', height: '220%' }, defs);
+    E('feGaussianBlur', { stdDeviation: 3.2, result: 'b' }, glow); const mg = E('feMerge', {}, glow); E('feMergeNode', { in: 'b' }, mg); E('feMergeNode', { in: 'SourceGraphic' }, mg);
+    const sky = E('linearGradient', { id: 'hdbGlass', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    E('stop', { offset: 0, 'stop-color': '#C9D4D4' }, sky); E('stop', { offset: 1, 'stop-color': '#A9B8B9' }, sky);
+    const clip = E('clipPath', { id: 'hdbClip' }, defs); this.clipRect = E('rect', { x: 0, y: GROUND, width: 400, height: 0 }, clip);
+    // ground, shadow, trees (outside the clip, always visible)
+    E('ellipse', { cx: 228, cy: GROUND + 4, rx: 170, ry: 10, fill: '#E7DFD2' });
+    E('rect', { x: 18, y: GROUND, width: 364, height: 6, rx: 3, fill: '#D9CFBE' });
+    for (const [cx, r] of [[44, 26], [384, 20]]) { E('rect', { x: cx - 3, y: GROUND - 34, width: 6, height: 34, fill: '#B49C7E', rx: 2 }); E('circle', { cx, cy: GROUND - 44, r, fill: '#9CCFA9' }); E('circle', { cx: cx + r * 0.35, cy: GROUND - 50, r: r * 0.6, fill: '#B5DDBE' }); }
+    const g = E('g', { 'clip-path': 'url(#hdbClip)' });
+    // lift core: mint tower with louvres and the block number
+    E('rect', { x: 44, y: TOP - 34, width: 52, height: GROUND - TOP + 34, fill: '#8FD3C1', rx: 4 }, g);
+    for (let y = TOP + 10; y < BASE - 6; y += 9) E('rect', { x: 54, y, width: 32, height: 3, rx: 1.5, fill: '#72BFAA' }, g);
+    E('rect', { x: 50, y: TOP - 26, width: 40, height: 26, rx: 4, fill: '#2F6F73' }, g);
+    const t = E('text', { x: 70, y: TOP - 8, 'text-anchor': 'middle', 'font-size': 15, class: 'blkno' }, g); t.textContent = '2027';
+    // main slab
+    E('rect', { x: X0, y: TOP, width: X1 - X0, height: BASE - TOP, fill: '#F7F2E9' }, g);
+    E('rect', { x: X1 - 30, y: TOP, width: 30, height: BASE - TOP, fill: '#CFE4F5' }, g);        // sky-blue accent column
+    // roof: parapet, garden, pergola, solar panels
+    E('rect', { x: X0 - 4, y: TOP - 12, width: X1 - X0 + 8, height: 12, rx: 3, fill: '#E9E1D3' }, g);
+    for (let x = X0 + 6; x < X1 - 40; x += 30) E('ellipse', { cx: x + 12, cy: TOP - 13, rx: 14, ry: 8, fill: '#9CCFA9' }, g);
+    for (let x = X1 - 86; x <= X1 - 6; x += 20) E('rect', { x, y: TOP - 34, width: 3, height: 22, fill: '#C9BEAB' }, g);
+    E('rect', { x: X1 - 90, y: TOP - 36, width: 86, height: 4, rx: 2, fill: '#C9BEAB' }, g);
+    // floors: slab line, planter ledge on alternate floors, fins, windows
+    this.wins = [];
+    const unitW = (X1 - 30 - X0) / (COLS / 2), ww = 22, wh = 27;
+    for (let f = 0; f < FLOORS; f++) {
+      const y0 = BASE - (f + 1) * FH;                               // f = 0 is the ground-floor flat row
+      E('rect', { x: X0 - 4, y: y0 + FH - 4, width: X1 - X0 + 8, height: 4, fill: '#E2D9CA' }, g);
+      if (f % 2 === 1) E('rect', { x: X0 + 4, y: y0 + FH - 9, width: X1 - X0 - 42, height: 5, rx: 2.5, fill: '#A8D5B3' }, g);
+      for (let u = 1; u < COLS / 2; u++) E('rect', { x: X0 + u * unitW - 2, y: y0 + 3, width: 4, height: FH - 7, fill: '#E7DFD1' }, g);
+      for (let c = 0; c < COLS; c++) {
+        const u = Math.floor(c / 2), side = c % 2, x = X0 + u * unitW + (side ? unitW / 2 + 2 : unitW / 2 - ww - 2);
+        E('rect', { x: x - 1.5, y: y0 + 7.5, width: ww + 3, height: wh + 3, rx: 3, fill: '#FFFFFF' }, g);
+        this.wins.push({ f, c, el: E('rect', { x, y: y0 + 9, width: ww, height: wh, rx: 2, fill: 'url(#hdbGlass)', class: 'w' }, g) });
+      }
+    }
+    // void deck: open ground floor with pillars and a lift lobby
+    E('rect', { x: X0, y: BASE, width: X1 - X0, height: GROUND - BASE, fill: '#EFE8DC' }, g);
+    E('rect', { x: X0 - 4, y: BASE, width: X1 - X0 + 8, height: 6, fill: '#DCD2C2' }, g);
+    for (let i = 0; i < 6; i++) E('rect', { x: X0 + 8 + i * ((X1 - X0 - 28) / 5), y: BASE + 6, width: 12, height: GROUND - BASE - 6, rx: 2, fill: '#E2D8C7' }, g);
+    E('rect', { x: X0 + 112, y: BASE + 18, width: 42, height: GROUND - BASE - 18, rx: 3, fill: '#BFD3D2' }, g);
+    // order: ground floor up, left to right (the facade reads like a stacked bar)
+    this.wins.sort((a, b) => a.f - b.f || a.c - b.c);
+  },
+  prime() {                                   // before playing: block not built yet, all windows dark
+    this.clipRect.setAttribute('y', this.geo.GROUND + 10); this.clipRect.setAttribute('height', 0);
+  },
+  play(streamOf, onLight, onDone) {
+    this.timers.forEach(clearTimeout); this.timers = []; cancelAnimationFrame(this.raf);
+    this.litCount = [0, 0, 0, 0]; MAP_STREAMS.forEach((_, i) => onLight(i));
+    this.wins.forEach(w => { w.el.setAttribute('fill', 'url(#hdbGlass)'); w.el.classList.remove('lit'); w.el.removeAttribute('filter'); });
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches, { GROUND, TOP } = this.geo, H = GROUND - TOP + 40;
+    const light = k => { const w = this.wins[k], i = streamOf[k], col = css(MAP_STREAMS[i][2]);
+      w.el.setAttribute('fill', col); w.el.setAttribute('filter', 'url(#hdbGlow)'); w.el.classList.add('lit'); this.litCount[i]++; onLight(i); };
+    if (reduce) { this.clipRect.setAttribute('y', 0); this.clipRect.setAttribute('height', GROUND + 10); streamOf.forEach((_, k) => light(k)); onDone(); return; }
+    // 0-1.2 s: build up from the ground
+    const t0 = performance.now(), grow = now => { const p = Math.min(1, (now - t0) / 1200), e = 1 - Math.pow(1 - p, 3);
+      this.clipRect.setAttribute('y', GROUND + 10 - (H + 10) * e); this.clipRect.setAttribute('height', (H + 10) * e); if (p < 1) this.raf = requestAnimationFrame(grow); };
+    this.raf = requestAnimationFrame(grow);
+    // 1.2-5.4 s: windows light one by one (small random jitter so it feels like an estate at dusk)
+    const nL = streamOf.length;
+    streamOf.forEach((_, k) => this.timers.push(setTimeout(() => light(k), 1200 + (nL > 1 ? k / (nL - 1) : 0) * 4200 + ((k * 37) % 7 - 3) * 18)));
+    // 5.4-6.0 s: caption
+    this.timers.push(setTimeout(onDone, 5500));
+  }
+};
 function countUp(root) {
   root.querySelectorAll('[data-count]').forEach(el => {
     const target = +el.dataset.count, t0 = performance.now(), dur = 1400;
@@ -1921,7 +2007,9 @@ function changeFor(get) {               // get(year) -> total for that year (res
 }
 const regionChange = key => changeFor(y => regionYear(y)[key].total);
 const paChange = name => changeFor(y => paYear(y)[name].total);
-const chgLabel = c => c == null ? 'n/a' : (c >= 0 ? '+' : '−') + Math.abs(c * 100).toFixed(0) + '%';
+const chgLabel = (c, d = 0) => c == null ? 'n/a' : (c >= 0 ? '+' : '−') + (+Math.abs(c * 100).toFixed(d)) + '%';
+// planning-area labels: up to one decimal (6.5k, 6k, +12.3%)
+const fmtK1 = v => v >= 1000 ? +(v / 1000).toFixed(1) + 'k' : String(Math.round(v));
 function chgColor(c) {                  // neutral sand -> green / coral, full colour at ±30%
   if (c == null) return '#E9E4DB';
   const t = Math.min(1, Math.abs(c) / 0.3), a = [0xEF, 0xEA, 0xE2], b = c >= 0 ? [0x1F, 0x9A, 0x76] : [0xD9, 0x60, 0x4C];
@@ -1929,7 +2017,7 @@ function chgColor(c) {                  // neutral sand -> green / coral, full c
 }
 const viewNote = () => MAP_VIEW === 'yoy' ? (mapYear === 2021 ? 'no 2020 town data to compare with' : `${mapYear}${mapYear === 2026 ? ' (annualised)' : ''} vs ${mapYear - 1}`)
   : `${mapYear}${mapYear === 2026 ? ' (annualised)' : ''} vs 2021`;
-const chgCell = c => `<td class="num ${c == null ? '' : c >= 0 ? 'up' : 'down'}">${chgLabel(c)}</td>`;
+const chgCell = (c, d = 0) => `<td class="num ${c == null ? '' : c >= 0 ? 'up' : 'down'}">${chgLabel(c, d)}</td>`;
 // colour the regions (or the selected region's planning areas) for the current view
 function applyFills() {
   const change = MAP_VIEW !== 'moves';
@@ -2131,7 +2219,7 @@ function renderDetail(key) {
     <h3 style="margin-top:16px">Planning areas</h3>
     <table id="paTable"><thead><tr><th>Area</th>${on.map(([, nm, col]) => `<th class="num"><span class="swatch" style="background:${css(col)};margin:0" title="${nm}"></span></th>`).join('')}<th class="num">Total</th>${MAP_VIEW !== 'moves' ? '<th class="num">Change</th>' : ''}</tr></thead><tbody>
       ${Object.values(paYear(mapYear)).filter(a => a.region === key).sort((a, b) => b.total - a.total).map(a =>
-        `<tr data-pa="${a.name}" style="cursor:pointer"><td>${titleCase(a.name)}</td>${on.map(([k]) => `<td class="num">${fmt(a[k])}</td>`).join('')}<td class="num"><b>${fmt(a.total)}</b></td>${MAP_VIEW !== 'moves' ? chgCell(paChange(a.name)) : ''}</tr>`).join('')}
+        `<tr data-pa="${a.name}" style="cursor:pointer"><td>${titleCase(a.name)}</td>${on.map(([k]) => `<td class="num">${fmt(a[k])}</td>`).join('')}<td class="num"><b>${fmt(a.total)}</b></td>${MAP_VIEW !== 'moves' ? chgCell(paChange(a.name), 1) : ''}</tr>`).join('')}
     </tbody></table>
     <p class="note">Columns follow the colours above: ${on.map(([, nm]) => nm).join(', ')}. Click a row or an area on the map to see its own cards.${key === 'Central' ? ' HDB estates in "Central Area" are counted under Outram, Kallang/Whampoa under Kallang.' : ''}</p>
     <h3 style="margin-top:16px">Homes in ${key} (<a href="https://data.gov.sg/datasets/d_388f9c61f437a588b47b008a012d13fa/view" target="_blank" rel="noopener">Census 2020</a>)</h3>
@@ -2183,7 +2271,7 @@ function drawPAs(key) {
   const svg = $('#sgmap'), tip = $('#tipBox'), meta = REGION_META.find(r => r.key === key);
   const g = el('g', { class: 'pa-layer' }); $('#gRegions').after(g);   // directly above the regions, below the region bars
   const gAreas = el('g', {}, g), gBars = el('g', {}, g), gLabels = el('g', {}, g);   // labels drawn last = always on top
-  PAV.g = g; PAV.bars = {}; PAV.region = key;
+  PAV.g = g; PAV.bars = {}; PAV.region = key; PAV.gBars = gBars; PAV.gLabels = gLabels;
   // Areas with no HDB town (nature reserves, farms, industry, the airport, downtown, islands):
   // drawn hatched with a name, so the region is fully mapped; no bar, because Census 2020 groups
   // their few homes as "Others" and gives no per-area count.
@@ -2206,7 +2294,7 @@ function drawPAs(key) {
   const list = DATA.paSvg.filter(p => PA_REG[p[0]] === key);
   for (const [name, , d, cx, cy] of list) {
     const p = el('path', { d, class: 'pa', fill: css(meta.fill), 'vector-effect': 'non-scaling-stroke', tabindex: 0, role: 'button', 'aria-label': `${titleCase(name)}: highlight in the panel` }, gAreas);
-    const tipHtml = () => { const a = paYear(mapYear)[name]; return `<b>${titleCase(name)}</b><br>${fmt(a.total)} estimated moves<br>` + (MAP_VIEW !== 'moves' ? `Change: <b>${chgLabel(paChange(name))}</b> (${viewNote()})<br>` : '') +
+    const tipHtml = () => { const a = paYear(mapYear)[name]; return `<b>${titleCase(name)}</b><br>${fmt(a.total)} estimated moves<br>` + (MAP_VIEW !== 'moves' ? `Change: <b>${chgLabel(paChange(name), 1)}</b> (${viewNote()})<br>` : '') +
       MAP_STREAMS.filter(([k]) => MAP_ON[k]).map(([k, nm]) => `${nm}: ${fmt(a[k])}`).join('<br>'); };
     p.addEventListener('mousemove', ev => { tip.innerHTML = tipHtml(); tip.classList.add('show'); tip.style.left = (ev.clientX + 14) + 'px'; tip.style.top = (ev.clientY + 14) + 'px'; });
     p.addEventListener('mouseleave', () => tip.classList.remove('show'));
@@ -2222,7 +2310,7 @@ function drawPAs(key) {
     const total = el('text', { class: 'patotal', 'text-anchor': 'middle', x: 0, y: 0 }, lg);
     const label = el('text', { class: 'paname', 'text-anchor': 'middle', x: 0 }, lg);
     label.textContent = titleCase(name);
-    PAV.bars[name] = { bg, segs, total, label, shadow, path: p, cur: [0, 0, 0, 0] };
+    PAV.bars[name] = { bg, lg, segs, total, label, shadow, path: p, cur: [0, 0, 0, 0] };
   }
 }
 // Zoom target = the region's planning areas (not its islands or reservoirs), with room above for
@@ -2240,7 +2328,7 @@ function layoutPAs(key) {
   const base = Math.min(H, W * 1.25); PAV.unit = base;
   const bw = base * 0.032, fName = base * 0.026, fTot = base * 0.029;
   // label only the busiest areas so small central areas do not collide (all areas have hover tips)
-  const d = paYear(mapYear), ranked = [...names].sort((a, b) => d[b].total - d[a].total), show = new Set(ranked.slice(0, 7));
+  const d = paYear(mapYear), ranked = [...names].sort((a, b) => d[b].total - d[a].total), show = new Set(ranked.slice(0, 7)); if (PAV.focus) show.add(PAV.focus);
   names.forEach(n => { const b = PAV.bars[n];
     b.segs.forEach(r => { r.setAttribute('x', -bw / 2); r.setAttribute('width', bw); r.setAttribute('rx', bw * 0.14); });
     b.shadow.setAttribute('rx', bw * 0.8); b.shadow.setAttribute('ry', bw * 0.22);
@@ -2273,7 +2361,7 @@ function animatePAs(down = false, delay = 0) {
       let y = 0; b.cur.forEach((h, j) => { y -= h; b.segs[j].setAttribute('y', y); b.segs[j].setAttribute('height', Math.max(0, h - (h > PAV.unit * 0.006 ? PAV.unit * 0.003 : 0))); });
       // totals only on the biggest areas, so small central areas stay readable
       b.total.setAttribute('y', y - PAV.unit * 0.01);
-      b.total.textContent = down ? '' : change ? (b.label.style.display !== 'none' ? chgLabel(paChange(n)) : '') : (a.total >= cut && a.total > 0 ? fmtK(a.total) : '');
+      b.total.textContent = down ? '' : change ? (b.label.style.display !== 'none' ? chgLabel(paChange(n), 1) : '') : ((a.total >= cut || n === PAV.focus) && a.total > 0 ? fmtK1(a.total) : '');
     });
     if (!done) animatePAs.raf = requestAnimationFrame(step);
   };
@@ -2317,7 +2405,7 @@ function renderAreaDetail(region, name) {
     <h3 style="margin-top:16px">Other planning areas in ${region}</h3>
     <table id="paTable"><thead><tr><th>Area</th><th class="num">Moves</th><th class="num">Share</th>${MAP_VIEW !== 'moves' ? '<th class="num">Change</th>' : ''}</tr></thead><tbody>
       ${Object.values(all[mapYear]).filter(x => x.region === region).sort((x, y) => y.total - x.total).map(x =>
-        `<tr data-pa="${x.name}" class="${x.name === name ? 'pa-hit' : ''}" style="cursor:pointer"><td>${titleCase(x.name)}</td><td class="num">${fmt(x.total)}</td><td class="num">${pct(x.total / reg.total)}</td>${MAP_VIEW !== 'moves' ? chgCell(paChange(x.name)) : ''}</tr>`).join('')}
+        `<tr data-pa="${x.name}" class="${x.name === name ? 'pa-hit' : ''}" style="cursor:pointer"><td>${titleCase(x.name)}</td><td class="num">${fmt(x.total)}</td><td class="num">${pct(x.total / reg.total)}</td>${MAP_VIEW !== 'moves' ? chgCell(paChange(x.name), 1) : ''}</tr>`).join('')}
     </tbody></table>
     <button class="btn" id="toAnalysis2" style="margin-top:18px">Open the full analysis</button>`;
   $('#backRegion').onclick = () => clearPA();
@@ -2331,17 +2419,32 @@ function renderAreaDetail(region, name) {
     options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: i => `${i.dataset.label}: ${fmt(i.raw)}` } } },
       scales: { x: { stacked: true, grid: NOGRID }, y: { stacked: true, grid: GRID, ticks: { callback: v => v >= 1000 ? +(v / 1000).toFixed(1) + 'k' : v } } } } });
 }
+// Layers, bottom to top: areas, bars, labels. By default every label sits above every bar.
+// A selected area's bar and label are lifted above ALL layers (so other areas' text cannot
+// cross it) and stay solid; every other bar and label fades.
+function markPABars() {
+  const f = PAV.focus;
+  Object.entries(PAV.bars).forEach(([n, b]) => {
+    const sel = !!f && n === f;
+    b.bg.classList.toggle('dimmed', !!f && !sel); b.lg.classList.toggle('dimmed', !!f && !sel);
+    if (sel) { PAV.g.appendChild(b.bg); PAV.g.appendChild(b.lg); b.label.style.display = ''; }
+    else { if (b.bg.parentNode !== PAV.gBars) PAV.gBars.appendChild(b.bg); if (b.lg.parentNode !== PAV.gLabels) PAV.gLabels.appendChild(b.lg); }
+  });
+  if (!f && PAV.region) layoutPAs(PAV.region);           // restore the usual label set
+}
 // Select a planning area: outline it on the map and switch the panel to its cards.
 // Clicking the selected area again (or "← Region") goes back to the region's cards.
 function focusPA(name) {
   if (PAV.focus === name) return clearPA();
   PAV.focus = name;
   Object.entries(PAV.bars).forEach(([n, b]) => { b.path.classList.toggle('focus', n === name); if (n === name) b.path.parentNode.appendChild(b.path); });  // outline + bring to front
+  markPABars(); animatePAs(false);
   renderDetail(selRegion); $('#detail').scrollTo({ top: 0, behavior: 'smooth' });
 }
 function clearPA() {
   PAV.focus = null;
   Object.values(PAV.bars).forEach(b => b.path.classList.remove('focus'));
+  markPABars(); animatePAs(false);
   renderDetail(selRegion); $('#detail').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
