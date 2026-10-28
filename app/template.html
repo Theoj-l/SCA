@@ -301,14 +301,41 @@ body:not(.on-map) #layerMap{display:none}
 .view-sel{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-2)}
 .view-sel select{padding:5px 10px}
 .view-key{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);white-space:nowrap}
+.view-key[hidden]{display:none}
 #sgmap.change-view .shadow{opacity:0}
 .view-key i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-left:6px}
 td.up{color:#167A5D;font-weight:700} td.down{color:#B4432F;font-weight:700}
-.map-head h1{font-size:clamp(34px,4.3vw,68px);font-weight:800;letter-spacing:-0.02em}
+/* compact map controls: years as one segmented control, small type toggles */
+#yearChips{display:inline-flex;gap:2px;background:#EFE9DF;border-radius:999px;padding:3px;flex-wrap:nowrap;margin:0}
+#yearChips .chip{border:0;background:transparent;padding:4px 11px;font-size:13px}
+#yearChips .chip[aria-pressed="true"]{background:var(--ink);color:#fff}
+#mapStreamChips{gap:6px;margin:0}
+#mapStreamChips{flex-wrap:wrap}
+#mapStreamChips .chip{font-size:12px;padding:3px 8px;border-width:1.5px}
+@media (max-width:600px){#yearChips{max-width:100%;overflow-x:auto;scrollbar-width:none}#yearChips .chip{padding:4px 9px;flex:none}}
+#mapStreamChips .chip[aria-pressed="false"]{opacity:.7}
+.map-tools .view-row{margin:0;gap:6px 14px}
+.view-sel select{font-size:13px;padding:4px 8px}
+.map-foot .note{font-size:13px}
+}
+.map-head h1{font-size:clamp(28px,2.9vw,58px);font-weight:800;letter-spacing:-0.02em}
 .map-head p{color:var(--ink-2);max-width:48ch;margin:8px 0 0}
 /* header sits above the map (the map's bars and zoomed regions can extend upwards) */
 .map-head{position:relative;z-index:5;pointer-events:none}
 .map-head>*>*{pointer-events:auto}
+/* wide screens: title on the left takes all the room it needs; the controls sit as a compact card
+   flush with the right edge, sized to their content (no empty space inside) */
+@media (min-width: 1200px){
+  .map-head{flex-wrap:nowrap;align-items:flex-start;gap:32px}
+  .map-head>div:first-child{flex:1 1 auto;min-width:0}
+  .map-head h1{text-wrap:balance}
+  .map-head p{max-width:62ch}
+  .map-tools{flex:none;width:max-content;margin-left:auto;padding:12px 14px;gap:9px !important;
+    background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid var(--rule);border-radius:18px;
+    box-shadow:0 6px 24px rgba(30,53,55,.08);pointer-events:auto}
+  #mapStreamChips{flex-wrap:nowrap}
+  #sgmap{margin-top:0}
+}
 .sub-row{display:flex;align-items:flex-start;gap:8px}
 .info-btn{flex:0 0 auto;width:26px;height:26px;margin-top:8px;border-radius:50%;border:2px solid var(--teal);background:#fff;color:var(--teal);
   font:700 14px/1 var(--display);cursor:pointer;display:grid;place-items:center;transition:background .2s,color .2s}
@@ -2243,7 +2270,7 @@ function buildMap() {
   $('#mapView').addEventListener('change', e => { MAP_VIEW = e.target.value; updateMap(); });
   const sc = $('#mapStreamChips');
   MAP_STREAMS.forEach(([k, name, col]) => { const b = document.createElement('button'); b.className = 'chip'; b.setAttribute('aria-pressed', 'true');
-    b.innerHTML = `<span class="dot" style="background:${css(col)}"></span>${name}`;
+    b.innerHTML = `<span class="dot" style="background:${css(col)}"></span>${{ res: 'HDB resale', rent: 'HDB rental', bto: 'New BTO', priv: 'Condo/landed' }[k]}`; b.title = name;
     b.onclick = () => { MAP_ON[k] = !MAP_ON[k]; b.setAttribute('aria-pressed', MAP_ON[k]); updateMap(); }; sc.appendChild(b); });
   $('#toAnalysis').onclick = openAnalysis;
   // info popover: how estimated moves are counted (closes on ×, Escape or a click outside)

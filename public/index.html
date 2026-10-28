@@ -317,21 +317,25 @@ td.up{color:#167A5D;font-weight:700} td.down{color:#B4432F;font-weight:700}
 .map-tools .view-row{margin:0;gap:6px 14px}
 .view-sel select{font-size:13px;padding:4px 8px}
 .map-foot .note{font-size:13px}
-/* wide screens: the controls float as a small card in the top-right corner (open sea on the map),
-   so the header is one short block and the map gets almost the whole screen height */
-@media (min-width: 1200px){
-  .map-tools{position:absolute;top:22px;right:clamp(16px,3vw,40px);z-index:6;max-width:460px;padding:12px 14px;gap:9px !important;
-    background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid var(--rule);border-radius:18px;
-    box-shadow:0 6px 24px rgba(30,53,55,.08);pointer-events:auto}
-  .map-head{padding-right:500px}
-  .map-head p{max-width:56ch}
-  #sgmap{margin-top:0}
 }
 .map-head h1{font-size:clamp(28px,2.9vw,58px);font-weight:800;letter-spacing:-0.02em}
 .map-head p{color:var(--ink-2);max-width:48ch;margin:8px 0 0}
 /* header sits above the map (the map's bars and zoomed regions can extend upwards) */
 .map-head{position:relative;z-index:5;pointer-events:none}
 .map-head>*>*{pointer-events:auto}
+/* wide screens: title on the left takes all the room it needs; the controls sit as a compact card
+   flush with the right edge, sized to their content (no empty space inside) */
+@media (min-width: 1200px){
+  .map-head{flex-wrap:nowrap;align-items:flex-start;gap:32px}
+  .map-head>div:first-child{flex:1 1 auto;min-width:0}
+  .map-head h1{text-wrap:balance}
+  .map-head p{max-width:62ch}
+  .map-tools{flex:none;width:max-content;margin-left:auto;padding:12px 14px;gap:9px !important;
+    background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid var(--rule);border-radius:18px;
+    box-shadow:0 6px 24px rgba(30,53,55,.08);pointer-events:auto}
+  #mapStreamChips{flex-wrap:nowrap}
+  #sgmap{margin-top:0}
+}
 .sub-row{display:flex;align-items:flex-start;gap:8px}
 .info-btn{flex:0 0 auto;width:26px;height:26px;margin-top:8px;border-radius:50%;border:2px solid var(--teal);background:#fff;color:var(--teal);
   font:700 14px/1 var(--display);cursor:pointer;display:grid;place-items:center;transition:background .2s,color .2s}
@@ -383,11 +387,12 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 .region-rows tr:hover td{background:var(--plaster)}
 #paTable{font-size:13.5px}
 #paTable td,#paTable th{padding:6px 5px}
-.map-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;position:absolute;left:clamp(16px,4vw,52px);right:clamp(16px,4vw,52px);bottom:16px;z-index:2;background:transparent;pointer-events:none}
+.map-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:nowrap;position:absolute;left:clamp(16px,4vw,52px);right:clamp(16px,4vw,52px);bottom:16px;z-index:2;background:transparent;pointer-events:none}
 .map-foot .btn{pointer-events:auto}
 /* the side panel's own 'Open the full analysis' button only shows on phones, where the map footer (with its button) is hidden */
 #toAnalysis3,#toAnalysis2{display:none}
-.map-foot .note{margin:0;max-width:62ch}
+.map-foot .note{margin:0;max-width:64ch;flex:0 1 auto;line-height:1.45}
+.map-foot .btn{flex:none}
 .tip-box{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;z-index:60;opacity:0;transition:opacity .15s;max-width:240px}
 .tip-box.show{opacity:1}
 .detail{background:var(--wall);height:100vh;position:sticky;top:0;overflow:auto;padding:22px 22px 28px;box-shadow:-6px 0 24px rgba(30,53,55,.08);min-width:0}
@@ -493,7 +498,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     </div>
     <svg id="sgmap" viewBox="6 -70 502 384" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Map of Singapore's five regions with estimated moves"></svg>
     <div class="map-foot">
-      <p class="note" id="mapNote">Bar height = estimated moves that year. Condo and landed moves come from <a href="https://data.gov.sg/datasets/d_7c69c943d5f0d89d6a9a773d2b51f337/view" target="_blank" rel="noopener">URA</a> by market segment, so they are split across regions by where private homes are (<a href="https://data.gov.sg/datasets/d_388f9c61f437a588b47b008a012d13fa/view" target="_blank" rel="noopener">Census 2020</a>). 2026 covers January to September only.</p>
+      <p class="note" id="mapNote">Bar height = estimated moves. Condo/landed moves (<a href="https://data.gov.sg/datasets/d_7c69c943d5f0d89d6a9a773d2b51f337/view" target="_blank" rel="noopener">URA</a>) are split by each region's share of private homes (<a href="https://data.gov.sg/datasets/d_388f9c61f437a588b47b008a012d13fa/view" target="_blank" rel="noopener">Census 2020</a>). 2026 = Jan–Sep.</p>
       <button class="btn" id="toAnalysis">Open the full analysis</button>
     </div>
   </div>
@@ -2225,7 +2230,7 @@ function applyFills() {
     Object.entries(PAV.bars).forEach(([n, b]) => b.path.setAttribute('fill', change ? chgColor(paChange(n)) : css(meta.fill))); }
   const key = $('#viewKey'); key.hidden = !change; $('#sgmap').classList.toggle('change-view', change);
   const note = $('#mapNote'); note.dataset.moves ??= note.innerHTML;
-  note.innerHTML = change ? `Colour = % change in estimated moves, ${viewNote()}, using the move types switched on. 2026 (January–September) is annualised before comparing; new BTO completions arrive in lumps, so areas with big projects swing most.` : note.dataset.moves;
+  note.innerHTML = change ? `Colour = % change in estimated moves, ${viewNote()}. 2026 (Jan–Sep) is annualised; areas with big BTO projects swing most.` : note.dataset.moves;
   if (change) key.lastElementChild.textContent = ' · ' + viewNote();
 }
 
