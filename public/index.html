@@ -143,7 +143,58 @@ a{color:var(--teal)}
 .lift .display{order:99;font-family:var(--display);font-weight:800;font-size:13px;text-align:center;color:var(--teal);
   padding-bottom:4px;border-bottom:2px solid #DDD4C6}
 
+/* ---------- Lift mode: one floor at a time, doors between floors ---------- */
+body.lift-mode{overflow:hidden}
+body.lift-mode main{position:fixed;inset:0;overflow:hidden;padding-left:0}
+body.lift-mode .floor{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;min-height:0;border-bottom:0;
+  padding-left:120px;transform:translateY(100%);visibility:hidden;overscroll-behavior:contain}
+body.lift-mode .floor.cur{transform:none;visibility:visible}
+body.lift-mode .floor.arrive-up>*{animation:arriveUp .6s cubic-bezier(.2,.8,.2,1) both}
+body.lift-mode .floor.arrive-down>*{animation:arriveDown .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes arriveUp{from{opacity:0;transform:translateY(-36px)}to{opacity:1;transform:none}}
+@keyframes arriveDown{from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:none}}
+.lift-doors{position:fixed;inset:0;z-index:15;pointer-events:none}
+.lift-doors .door{position:absolute;top:0;bottom:0;width:50.5%;transition:transform .42s cubic-bezier(.6,0,.35,1);
+  background:linear-gradient(90deg,#E2DCD0,#F3EFE8 45%,#DCD5C8)}
+.lift-doors .door.l{left:0;transform:translateX(-101%);box-shadow:inset -3px 0 0 #CDC4B4}
+.lift-doors .door.r{right:0;transform:translateX(101%);box-shadow:inset 3px 0 0 #CDC4B4}
+.lift-doors.closed{pointer-events:auto}
+.lift-doors.closed .door{transform:none}
+.lift-ind{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);display:flex;gap:14px;align-items:center;
+  background:#1E3537;color:#FFD98E;border-radius:18px;padding:14px 24px;font-family:var(--display);opacity:0;transition:opacity .2s, transform .2s;
+  box-shadow:0 12px 40px rgba(30,53,55,.35)}
+.lift-ind b{display:block;font-size:44px;line-height:1;font-weight:800}
+.lift-ind small{display:block;font-size:13px;color:#F3EFE8;opacity:.85;margin-top:4px;font-family:var(--body)}
+.lift-ind .arrow{font-size:26px}
+.lift-doors.closed .lift-ind{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.lift-doors.moving .arrow{animation:liftArrow .45s ease-in-out infinite}
+.lift-doors.down .arrow{transform:rotate(180deg)}
+@keyframes liftArrow{0%,100%{opacity:.45}50%{opacity:1}}
+/* speed lines streaking past while the lift travels: upward when going up, downward when going down */
+.lift-wind{position:absolute;inset:0;overflow:hidden;opacity:0;transition:opacity .25s}
+.lift-doors.moving .lift-wind{opacity:1}
+.lift-wind i{position:absolute;top:0;width:3px;border-radius:2px;background:linear-gradient(to bottom,rgba(47,111,115,0),rgba(47,111,115,.55),rgba(47,111,115,0));
+  animation:windUp var(--d,.55s) linear infinite;animation-delay:var(--dl,0s);animation-play-state:paused}
+.lift-doors.moving .lift-wind i{animation-play-state:running}
+.lift-doors.down .lift-wind i{animation-name:windDown}
+@keyframes windUp{from{transform:translateY(110vh)}to{transform:translateY(-40vh)}}
+@keyframes windDown{from{transform:translateY(-40vh)}to{transform:translateY(110vh)}}
+.lift-ind .arrow.travel{display:inline-block}
+.lift-doors.moving .lift-ind{animation:liftHum .32s ease-in-out infinite}
+@keyframes liftHum{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,calc(-50% - 2px))}}
+.lift-hint{position:fixed;left:50%;transform:translateX(-50%);z-index:25;background:var(--ink);color:#fff;border-radius:999px;
+  padding:8px 18px 10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;overflow:hidden;white-space:nowrap}
+.lift-hint.show{opacity:1}
+.lift-hint.top{top:16px;bottom:auto} .lift-hint.bottom{bottom:16px;top:auto}
+.lift-hint i{position:absolute;left:0;bottom:0;height:3px;width:var(--p,0%);background:#FFD98E;transition:width .08s linear}
+
 /* ---------- Floors (sections) ------------------------------------------- */
+/* Title + intro: stacked on narrower screens; side by side on wide screens so the top of a floor isn't half empty */
+@media (min-width: 1280px){
+  .floor-head{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:20px 56px;align-items:end;padding-right:clamp(120px,10vw,190px);margin-bottom:8px}
+  .floor-head h2{max-width:none}
+  .floor-head .lede{max-width:72ch;margin:0}
+}
 main{padding-left:96px}
 .floor{min-height:100vh;padding:72px clamp(16px,5vw,72px) 72px 24px;position:relative;
   border-bottom:2px dashed var(--rule)}
@@ -369,6 +420,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
   .lift button{width:34px;height:34px;font-size:13px;flex:0 0 auto}
   .lift .display,.lift .tip{display:none}
   .floor{padding:56px 16px 96px}
+  body.lift-mode .floor{padding-left:16px;padding-bottom:130px}
   .map-head h1{font-size:26px}
   .floor-no{display:none}
   .panel{padding:16px 14px}
@@ -439,7 +491,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     <h1>Every HDB sale is two moves.</h1>
     <p class="sub">We plan a new Singapore moving company from official housing data: forecast the moves, size the fleet, and check whether the investment survives the risks.</p>
     <div class="kpis" id="heroKpis"><!-- filled by JS --></div>
-    <p class="note" style="margin-top:18px">Use the lift on the left, or the arrow keys, to go floor by floor.</p>
+    <p class="note" style="margin-top:18px">Ride the lift: <b>scroll up</b> past the top of a floor (or press <b>↑</b>) to go up a floor, scroll down past the bottom (or <b>↓</b>) to go down. The buttons on the left jump straight to a floor.</p>
   </div>
   <div>
     <svg class="hdb" id="hdb" viewBox="0 0 400 560" role="img" aria-label="A modern HDB block whose windows light up: one window per 2,500 estimated moves in 2025, coloured by type of move. Click to replay."></svg>
@@ -450,8 +502,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ===================== 1: WHERE MOVES COME FROM ===================== -->
 <section class="floor" id="f1" data-label="Where moves come from" data-short="1">
   <span class="floor-no" aria-hidden="true">1</span>
-  <h2>Flats change hands five years after keys</h2>
-  <p class="lede">Owners must live in a new flat for five years, the Minimum Occupation Period (MOP). Then a wave of them sells, and every sale needs a seller to move out and a buyer to move in.</p>
+  <div class="floor-head"><h2>Flats change hands five years after keys</h2>
+    <p class="lede">Owners must live in a new flat for five years, the Minimum Occupation Period (MOP). Then a wave of them sells, and every sale needs a seller to move out and a buyer to move in.</p></div>
   <div class="grid g2">
     <div class="panel">
       <h3 id="hazTitle">Share of flats resold each year, by flat age</h3>
@@ -488,8 +540,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ========================== 2: TOWN CLUSTERS ========================= -->
 <section class="floor" id="f2" data-label="Town clusters" data-short="2">
   <span class="floor-no" aria-hidden="true">2</span>
-  <h2>Towns fall into a few demand profiles</h2>
-  <p class="lede">Not every town moves the same way. We score each of the 26 HDB towns on five things (how often flats are resold, how fast that is growing, how many flats reach MOP soon, how much renting goes on, how many flats are 4-room or bigger) and let k-means put similar towns into groups. The groups tell us what kind of work to expect where, and a second step picks where to park the trucks.</p>
+  <div class="floor-head"><h2>Towns fall into a few demand profiles</h2>
+    <p class="lede">Not every town moves the same way. We score each of the 26 HDB towns on five things (how often flats are resold, how fast that is growing, how many flats reach MOP soon, how much renting goes on, how many flats are 4-room or bigger) and let k-means put similar towns into groups. The groups tell us what kind of work to expect where, and a second step picks where to park the trucks.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="controls">
@@ -514,8 +566,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ========================== 3: FORECAST CHECK ======================== -->
 <section class="floor" id="f3" data-label="Forecast check" data-short="3">
   <span class="floor-no" aria-hidden="true">3</span>
-  <h2>The model beats a fair baseline on unseen years</h2>
-  <p class="lede">Forecast = flats in each age group × chance of resale at that age, × a seasonal pattern, × a market-mood factor. We fit on 2011–2023 only, then forecast every month of Jan 2024 – Sep 2026 without peeking, and test 1–5 year forecasts from nine different start years.</p>
+  <div class="floor-head"><h2>The model beats a fair baseline on unseen years</h2>
+    <p class="lede">Forecast = flats in each age group × chance of resale at that age, × a seasonal pattern, × a market-mood factor. We fit on 2011–2023 only, then forecast every month of Jan 2024 – Sep 2026 without peeking, and test 1–5 year forecasts from nine different start years.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="controls" id="btChips"></div>
@@ -536,8 +588,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ======================== 4: FIVE-YEAR OUTLOOK ======================= -->
 <section class="floor" id="f4" data-label="Five-year outlook" data-short="4">
   <span class="floor-no" aria-hidden="true">4</span>
-  <h2 id="fanTitle">Moving demand keeps rising to 2031</h2>
-  <p class="lede">Long-range forecasts lean on what is already built: every flat completed by 2026 has a known MOP year. Uncertainty comes from market mood (estimated from 16 years, 2011–2026) and future BTO completions (a slider).</p>
+  <div class="floor-head"><h2 id="fanTitle">Moving demand keeps rising to 2031</h2>
+    <p class="lede">Long-range forecasts lean on what is already built: every flat completed by 2026 has a known MOP year. Uncertainty comes from market mood (estimated from 16 years, 2011–2026) and future BTO completions (a slider).</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="controls">
@@ -562,8 +614,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ====================== 5: RECESSIONS AND RULE CHANGES ================= -->
 <section class="floor" id="f4s" data-label="Shocks and policy" data-short="5">
   <span class="floor-no" aria-hidden="true">5</span>
-  <h2 id="shockTitle">Recessions and rule changes, priced in</h2>
-  <p class="lede">Moving demand does not only follow the flats. We line up 36 years of market mood against Singapore's GDP growth and 16 dated rule changes for PRs, foreigners, private-home owners and loan limits, measure what each does, then let them strike at random in the simulated futures, or force one as a stress test.</p>
+  <div class="floor-head"><h2 id="shockTitle">Recessions and rule changes, priced in</h2>
+    <p class="lede">Moving demand does not only follow the flats. We line up 36 years of market mood against Singapore's GDP growth and 16 dated rule changes for PRs, foreigners, private-home owners and loan limits, measure what each does, then let them strike at random in the simulated futures, or force one as a stress test.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="chart-box tall"><canvas id="cShock" aria-label="Market mood, GDP growth and rule changes, 1990 to 2026"></canvas></div>
@@ -595,8 +647,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- =========================== 5: FLEET SIZING ========================= -->
 <section class="floor" id="f5" data-label="Fleet sizing" data-short="6">
   <span class="floor-no" aria-hidden="true">6</span>
-  <h2 id="nvTitle">Own enough crews to fully cover most months</h2>
-  <p class="lede">Newsvendor logic on capacity. An idle crew costs us its wages and truck (overage). A job beyond capacity goes to a subcontractor at a premium (underage). Own capacity up to the demand quantile where the two balance.</p>
+  <div class="floor-head"><h2 id="nvTitle">Own enough crews to fully cover most months</h2>
+    <p class="lede">Newsvendor logic on capacity. An idle crew costs us its wages and truck (overage). A job beyond capacity goes to a subcontractor at a premium (underage). Own capacity up to the demand quantile where the two balance.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="controls" id="nvYearChips"></div>
@@ -615,8 +667,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ============================== 6: RISK ============================== -->
 <section class="floor" id="f6" data-label="Risk" data-short="7">
   <span class="floor-no" aria-hidden="true">7</span>
-  <h2 id="riskTitle">Phasing the fleet cuts the downside</h2>
-  <p class="lede">Trucks are fixed assets; the market share we win is not. We simulate 2,000 five-year futures (demand, market mood, share won, price pressure, truck downtime) and run the same futures through four ways of building the fleet.</p>
+  <div class="floor-head"><h2 id="riskTitle">Phasing the fleet cuts the downside</h2>
+    <p class="lede">Trucks are fixed assets; the market share we win is not. We simulate 2,000 five-year futures (demand, market mood, share won, price pressure, truck downtime) and run the same futures through four ways of building the fleet.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="chart-box tall"><canvas id="cRisk" aria-label="Distribution of NPV by strategy"></canvas></div>
@@ -635,8 +687,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <!-- ============================= 7: RETURN ============================= -->
 <section class="floor" id="f7" data-label="Return" data-short="8">
   <span class="floor-no" aria-hidden="true">8</span>
-  <h2 id="roiTitle">Return on the investment</h2>
-  <p class="lede">Pick a strategy to see its cash path, payback and which assumptions move the answer most.</p>
+  <div class="floor-head"><h2 id="roiTitle">Return on the investment</h2>
+    <p class="lede">Pick a strategy to see its cash path, payback and which assumptions move the answer most.</p></div>
   <div class="controls" id="roiChips"></div>
   <div class="grid g2">
     <div class="panel">
@@ -686,6 +738,14 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
   </div>
 </section>
 </main>
+
+<!-- Lift doors (close, travel, open) shown when moving between floors; hint pill for "keep scrolling" -->
+<div class="lift-doors" id="liftDoors" aria-hidden="true">
+  <div class="door l"></div><div class="door r"></div>
+  <div class="lift-wind" id="liftWind"></div>
+  <div class="lift-ind"><span class="arrow" id="liftArrow">▲</span><div><b id="liftInd">G</b><small id="liftName"></small></div></div>
+</div>
+<div class="lift-hint" id="liftHint" aria-hidden="true"><span id="liftHintTxt"></span><i></i></div>
 
 <!-- =============== YEAR DIALOG: what rules changed that year =============== -->
 <div class="modal-back" id="yearModal" hidden>
@@ -2663,22 +2723,94 @@ function buildDrawer() {
   $('#drawerClose').onclick = () => open(false);
 }
 // Lift navigation: one button per floor, highlights the floor in view, keyboard support
+/* ==========================================================================
+   LIFT: the analysis is a building. Floors stack from G (bottom) to 9 (top);
+   only one floor is on screen. Going up: scroll up past the top of a floor,
+   or press Up / PageUp. Going down: scroll down past the bottom, or Down /
+   PageDown. You must keep scrolling at the edge (a progress pill fills up)
+   before the lift moves, so floors don't change by accident. Moving plays a
+   lift ride: doors close, the indicator counts floors, doors open on the new
+   floor, whose content settles in from the direction of travel.
+   ========================================================================== */
+const LIFT = { floors: [], cur: 0, busy: false, acc: 0, dir: 0, TH: 420, idle: null };
+function liftShow(i, arrive) {
+  const fl = LIFT.floors;
+  fl.forEach((f, k) => { f.classList.toggle('cur', k === i); f.classList.remove('arrive-up', 'arrive-down'); f._btn.setAttribute('aria-current', k === i); });
+  const f = fl[i]; f.scrollTop = 0; if (arrive) { void f.offsetWidth; f.classList.add(arrive); }
+  $('#liftDisplay').textContent = f.dataset.short; LIFT.cur = i;
+}
+function goFloor(t) {
+  const fl = LIFT.floors; t = Math.max(0, Math.min(fl.length - 1, t));
+  if (LIFT.busy || t === LIFT.cur) return;
+  liftHint(0, 0);
+  const up = t > LIFT.cur, from = LIFT.cur;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { liftShow(t); return; }
+  LIFT.busy = true;
+  const doors = $('#liftDoors'), ind = $('#liftInd'), nm = $('#liftName');
+  doors.classList.toggle('down', !up); ind.textContent = fl[from].dataset.short; nm.textContent = fl[from].dataset.label;
+  doors.classList.add('closed', 'moving');
+  const steps = Math.abs(t - from), stepMs = Math.max(150, Math.min(330, 1000 / steps));
+  let k = from;
+  const tick = () => {
+    k += up ? 1 : -1; ind.textContent = fl[k].dataset.short; nm.textContent = fl[k].dataset.label; $('#liftDisplay').textContent = fl[k].dataset.short;
+    if (k !== t) setTimeout(tick, stepMs);
+    else setTimeout(() => {                                           // arrived: open the doors on the new floor
+      doors.classList.remove('moving'); liftShow(t, up ? 'arrive-up' : 'arrive-down');
+      setTimeout(() => doors.classList.remove('closed'), 140);
+      setTimeout(() => { LIFT.busy = false; }, 620);
+    }, 300);
+  };
+  setTimeout(tick, 430);                                              // doors close first
+}
+// progress pill while the user keeps scrolling at the edge of a floor
+function liftHint(dir, p) {
+  const h = $('#liftHint'), fl = LIFT.floors, nxt = fl[LIFT.cur + dir];
+  if (!dir || !nxt) { h.classList.remove('show'); return; }
+  $('#liftHintTxt').textContent = `${dir > 0 ? '▲ Keep scrolling up' : '▼ Keep scrolling down'} to floor ${nxt.dataset.short}: ${nxt.dataset.label}`;
+  h.classList.toggle('top', dir > 0); h.classList.toggle('bottom', dir < 0); h.style.setProperty('--p', Math.min(100, p * 100) + '%'); h.classList.add('show');
+}
+function liftPush(dir, amount) {                    // dir +1 = up a floor, -1 = down
+  if (!LIFT.floors[LIFT.cur + dir]) return;
+  if (dir !== LIFT.dir) { LIFT.dir = dir; LIFT.acc = 0; }
+  LIFT.acc += amount; liftHint(dir, LIFT.acc / LIFT.TH);
+  clearTimeout(LIFT.idle); LIFT.idle = setTimeout(() => { LIFT.acc = 0; LIFT.dir = 0; liftHint(0, 0); }, 650);
+  if (LIFT.acc >= LIFT.TH) { LIFT.acc = 0; LIFT.dir = 0; clearTimeout(LIFT.idle); goFloor(LIFT.cur + dir); }
+}
 function buildLift() {
   const floors = [...document.querySelectorAll('.floor')], nav = $('.lift');
+  LIFT.floors = floors; document.body.classList.add('lift-mode');
+  // speed lines: random x positions, lengths, speeds (seeded so they look the same every time)
+  const wr = makeRng(7), wind = $('#liftWind');
+  wind.innerHTML = Array.from({ length: 26 }, () => `<i style="left:${(wr.u() * 100).toFixed(1)}%;height:${Math.round(70 + wr.u() * 170)}px;--d:${(0.35 + wr.u() * 0.4).toFixed(2)}s;--dl:-${(wr.u() * 0.7).toFixed(2)}s;opacity:${(0.45 + wr.u() * 0.55).toFixed(2)}"></i>`).join('');
   const mapBtn = document.createElement('button'); mapBtn.innerHTML = 'Map<span class="tip">Back to the region map</span>';
   mapBtn.style.cssText = 'order:100;font-size:12px'; mapBtn.setAttribute('aria-label', 'Back to the region map'); mapBtn.onclick = openMap; nav.appendChild(mapBtn);
   floors.forEach((f, i) => { const b = document.createElement('button');
     b.innerHTML = `${f.dataset.short}<span class="tip">${f.dataset.label}</span>`; b.setAttribute('aria-label', `Floor ${f.dataset.short}: ${f.dataset.label}`);
-    b.onclick = () => f.scrollIntoView({ behavior: 'smooth' }); nav.appendChild(b); f._btn = b; });
-  let current = 0;
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) {
-    current = floors.indexOf(e.target); floors.forEach(f => f._btn.setAttribute('aria-current', f === e.target));
-    $('#liftDisplay').textContent = e.target.dataset.short; } }), { threshold: 0.45 });
-  floors.forEach(f => io.observe(f));
+    b.onclick = () => goFloor(i); nav.appendChild(b); f._btn = b; });
+  liftShow(0);
+  const main = $('main'), edge = f => ({ top: f.scrollTop <= 1, bottom: f.scrollTop + f.clientHeight >= f.scrollHeight - 2 });
+  // mouse wheel / trackpad: normal scrolling inside a floor; at an edge, scrolling further charges the lift
+  main.addEventListener('wheel', e => {
+    if (document.body.classList.contains('on-map')) return;
+    if (LIFT.busy) { e.preventDefault(); return; }
+    if (e.target.closest('.table-wrap, .panel table') && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const f = LIFT.floors[LIFT.cur], ed = edge(f), d = e.deltaY * (e.deltaMode === 1 ? 33 : 1);
+    if (d < 0 && ed.top) { e.preventDefault(); liftPush(1, -d); }
+    else if (d > 0 && ed.bottom) { e.preventDefault(); liftPush(-1, d); }
+  }, { passive: false });
+  // touch: drag past the top (finger moving down) to go up, past the bottom to go down
+  let ty = null, tEdge = null;
+  main.addEventListener('touchstart', e => { const f = LIFT.floors[LIFT.cur]; ty = e.touches[0].clientY; tEdge = edge(f); LIFT.acc = 0; }, { passive: true });
+  main.addEventListener('touchmove', e => { if (ty == null || LIFT.busy) return; const dy = e.touches[0].clientY - ty;
+    if (dy > 0 && tEdge.top) liftHint(1, dy / 160); else if (dy < 0 && tEdge.bottom) liftHint(-1, -dy / 160); }, { passive: true });
+  main.addEventListener('touchend', e => { if (ty == null) return; const dy = e.changedTouches[0].clientY - ty; liftHint(0, 0);
+    if (dy > 160 && tEdge.top) goFloor(LIFT.cur + 1); else if (dy < -160 && tEdge.bottom) goFloor(LIFT.cur - 1); ty = null; });
   document.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT' || document.body.classList.contains('on-map')) return;
-    if (['ArrowDown', 'PageDown', 'ArrowRight'].includes(e.key)) { e.preventDefault(); floors[Math.min(floors.length - 1, current + 1)].scrollIntoView({ behavior: 'smooth' }); }
-    if (['ArrowUp', 'PageUp', 'ArrowLeft'].includes(e.key)) { e.preventDefault(); floors[Math.max(0, current - 1)].scrollIntoView({ behavior: 'smooth' }); }
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || document.body.classList.contains('on-map') || !$('#yearModal').hidden) return;
+    if (['ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); goFloor(LIFT.cur + 1); }
+    if (['ArrowDown', 'PageDown'].includes(e.key)) { e.preventDefault(); goFloor(LIFT.cur - 1); }
+    if (e.key === 'Home') { e.preventDefault(); goFloor(0); }
+    if (e.key === 'End') { e.preventDefault(); goFloor(LIFT.floors.length - 1); }
   });
 }
 
