@@ -1,6 +1,6 @@
 # MoveWell: planning a Singapore moving company from HDB data
 
-OPIM348 Supply Chain Analytics term project (SMU). A new moving company has to buy fixed assets (trucks, crews) before it knows how much work it will win. Using 36 years of official housing data we forecast Singapore's household moves to 2031, size the fleet with the newsvendor model, and test four ways of building the fleet for risk (NPV, chance of loss, CVaR) and return (IRR, payback), including recessions and rule changes for PRs, foreigners and loans.
+OPIM348 Supply Chain Analytics term project (SMU). A new moving company has to buy fixed assets (trucks, crews) before it knows how much work it will win. Using 36 years of official housing data we forecast Singapore's household moves to 2031, size the fleet with the newsvendor model, test five ways of building the fleet for risk (NPV, chance of loss, CVaR) and return (IRR, payback), including recessions and rule changes for PRs, foreigners and loans, and test peak pricing as a way to manage the peak instead of buying for it.
 
 ## What's in the repo
 
@@ -21,6 +21,11 @@ SCA/
 │   ├── processed/                aggregated data used to build the app (same as the notebook's snapshot)
 │   ├── raw/                      raw downloads (git-ignored)
 │   └── app_reference.json        output of make_reference.js
+├── tools/
+│   ├── fetch_acra_movers.py      downloads ACRA's company register (data.gov.sg API) and keeps moving firms (SSIC 49232)
+│   └── build_competitors.py      summarises them into data/processed/competitors.json
+├── docs/
+│   └── MODEL_LOGIC.md            every model, formula and result, in one document
 ├── requirements.txt
 └── README.md
 ```
@@ -67,7 +72,7 @@ The app and notebook are built around the 27 Oct 2026 data cut-off (Jan–Sep 20
 
 ## Method in one paragraph
 
-No public data counts moving jobs, so moves are **estimated from housing records**: an HDB resale = 2 moves, a new tenancy = 1 (50% of rental approvals, an assumption), a completed BTO flat = 1, a private resale = 2 and a completed new private sale = 1. HDB resales are forecast as *flats of each age × the chance a flat that age is resold* (it jumps after the 5-year MOP), × a seasonal index, × a "market mood" that follows an AR(1). Resale chances are estimated separately before and after the 2010–13 cooling measures. Five years ahead the forecast errs by about 8% in a rolling backtest, against 22% for repeating last year. Recessions (GDP growth under 1%) raise resales by about 17%; a major rule change moves them about 7%. Both enter the simulation as random shocks at historical rates, or as forced stress tests. 2,000 simulated futures feed a newsvendor fleet rule (critical ratio ≈ 58%) and four fleet strategies; **phased truck buying** has the best mean NPV and the lowest chance of loss.
+No public data counts moving jobs, so moves are **estimated from housing records**: an HDB resale = 2 moves, a new tenancy = 1 (50% of rental approvals, an assumption), a completed BTO flat = 1, a private resale = 2 and a completed new private sale = 1. HDB resales are forecast as *flats of each age × the chance a flat that age is resold* (it jumps after the 5-year MOP), × a seasonal index, × a "market mood" that follows an AR(1). Resale chances are estimated separately before and after the 2010–13 cooling measures. Five years ahead the forecast errs by about 8% in a rolling backtest, against 22% for repeating last year. Recessions (GDP growth under 1%) raise resales by about 17%; a major rule change moves them about 7%. Both enter the simulation as random shocks at historical rates, or as forced stress tests. 2,000 simulated futures feed the fleet decision: trucks are capped by a newsvendor rule, and **crews are planned month by month by dynamic programming** (hire and release costs, never more crews than trucks), with trucks bought to match the plan. Cash flows are **after Singapore corporate tax** (17%, start-up and partial exemptions, 3-year capital allowances, loss carry-forward). Five strategies are compared on the same futures. **Broker first, then phased** (subcontract every job in 2027 while demand is uncertain, then buy trucks in phases) has the best mean NPV (S$421k ± S$34k; S$407k–430k across seeds) and the lowest chance of loss among the owning strategies (24%); phased buying from day one is second (S$358k, 26%), and a lean broker is the low-risk, low-return alternative. The verdict is **go, with conditions**: break-even needs about 2.2% market share, and trucks are bought only if MoveWell is placing at least about 84 jobs a month as a broker by December 2027; that option to stop is worth about S$95k. A peak rate card adds only about S$28k once crews are planned (the premium alone about S$166k) and depends on assumed price sensitivity. Market and competitor research uses ACRA's register (2,232 live moving firms, mostly one-person, with high churn) and published price lists (our S$900 is mid-market). A sense check bounds the demand measure between 5.3% and 8.0% of households a year. Full logic: [`docs/MODEL_LOGIC.md`](docs/MODEL_LOGIC.md).
 
 ## Data sources
 

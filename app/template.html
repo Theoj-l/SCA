@@ -41,7 +41,7 @@
       5  Shocks and policy  recessions (GDP) + rule changes for PRs/foreigners,
                             their measured effect, random shocks + stress test
       6  Fleet sizing       newsvendor critical ratio for crews/trucks
-      7  Risk               Monte Carlo of four fleet strategies
+      7  Risk               Monte Carlo of five fleet strategies, make-or-buy test
       8  Return             NPV, IRR, payback, sensitivity (tornado)
       9  Recommendation     the decision + sources
 
@@ -85,6 +85,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MoveWell: HDB Moving Demand</title>
+<!-- browser-tab icon: an M made of two HDB roofs with a door (inline SVG, so no extra file is needed) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMzIiIGZpbGw9IiNGQkY4RjMiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMUUzNTM3IiBzdHJva2Utd2lkdGg9IjQiLz48cGF0aCBkPSJNMTQgNDYgVjI0IEwyMyAxNiBMMzIgMjQgTDQxIDE2IEw1MCAyNCBWNDYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzJGNkY3MyIgc3Ryb2tlLXdpZHRoPSI3IiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNMjcgNDYgVjM2IEgzNyBWNDYiIGZpbGw9IiNGRkQ5OEUiLz48L3N2Zz4=">
 <meta name="description" content="Interactive term project: forecasting moving-company demand from HDB data, with newsvendor fleet sizing, Monte Carlo risk and ROI.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -229,8 +231,26 @@ td.num{white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .btn{background:var(--teal);color:#fff;border:0;border-radius:999px;padding:9px 18px;font:inherit;font-weight:700;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--teal);border:2px solid var(--teal)}
+.hero-answer:empty{display:none}
+.hero-answer{margin-top:18px;padding:14px 18px;font-size:15px;line-height:1.5}
+.hero-answer b.v{font-family:var(--display);font-size:18px}
+.gate-kpis .kpi b{font-size:26px}
+.limits li{margin:6px 0}
+#priceTable td:nth-child(2){white-space:nowrap}
+#forcesTable td:nth-child(2){font-weight:600;white-space:nowrap}
 label.rng{display:flex;flex-direction:column;font-size:14px;color:var(--ink-2);min-width:180px}
 label.rng output{font-family:var(--display);font-weight:600;color:var(--ink);font-size:16px}
+.pr-sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
+.pr-sliders label.rng{min-width:0}
+.rate-card{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rate-card div{background:#fff;border-radius:12px;padding:10px 12px;border:1px solid var(--rule)}
+.rate-card b{display:block;font-family:var(--display);font-size:20px}
+.rate-card span{font-size:12.5px;color:var(--ink-2)}
+.rate-card .pk{border-color:var(--c2)}.rate-card .op{border-color:var(--c3)}
+#prGrid td.num{font-variant-numeric:tabular-nums}
+#prGrid td.cur{outline:2px solid var(--ink);outline-offset:-2px;font-weight:700}
+#prGrid td.pos{background:#E3F4EC}#prGrid td.neg{background:#FBE5E1}
+@media (max-width:640px){.pr-sliders,.rate-card{grid-template-columns:minmax(0,1fr)}}
 input[type=range]{accent-color:var(--teal);width:100%}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 #countBox td{vertical-align:top}
@@ -479,7 +499,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
             <tr><td><span class="swatch" style="background:var(--c4)"></span>New BTO flats</td><td><a href="https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view" target="_blank" rel="noopener">Flats completed that year</a></td><td>1 per flat <small>(owner moves in)</small></td></tr>
             <tr><td><span class="swatch" style="background:var(--c5)"></span>Condo and landed</td><td><a href="https://data.gov.sg/datasets/d_7c69c943d5f0d89d6a9a773d2b51f337/view" target="_blank" rel="noopener">URA private transactions</a></td><td>2 per resale, 1 per completed new sale</td></tr>
           </tbody></table>
-          <p class="note">Condo and landed moves are only published nationally, so they are split across regions by each area's share of private homes (<a href="https://data.gov.sg/datasets/d_388f9c61f437a588b47b008a012d13fa/view" target="_blank" rel="noopener">Census 2020</a>). Moves without a record (moving in with family, leaving Singapore, private-home tenancies) are missed, so the true total is likely higher. Full source list: floor 9 of the analysis.</p>
+          <p class="note">Condo and landed moves are only published nationally, so they are split across regions by each area's share of private homes (<a href="https://data.gov.sg/datasets/d_388f9c61f437a588b47b008a012d13fa/view" target="_blank" rel="noopener">Census 2020</a>). Moves without a record (moving in with family, leaving Singapore, private-home tenancies) are missed, so the true total is likely higher. Full source list: floor 10 of the analysis.</p>
         </div>
       </div>
       <div class="map-tools">
@@ -519,6 +539,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     <h1>Every HDB sale is two moves.</h1>
     <p class="sub">We plan a new Singapore moving company from official housing data: forecast the moves, size the fleet, and check whether the investment survives the risks.</p>
     <div class="kpis" id="heroKpis"><!-- filled by JS --></div>
+    <div class="panel tint-sky hero-answer" id="heroAnswer"></div>
     <p class="note" style="margin-top:18px">Ride the lift: <b>scroll up</b> past the top of a floor (or press <b>↑</b>) to go up a floor, scroll down past the bottom (or <b>↓</b>) to go down. The buttons on the left jump straight to a floor.</p>
   </div>
   <div>
@@ -537,7 +558,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
       <h3 id="hazTitle">Share of flats resold each year, by flat age</h3>
       <p class="note" style="margin-top:0">Two eras from 36 years of data: since the rule changes and cooling measures of 2010–2013, older flats are resold about a third less often.</p>
       <div class="chart-box"><canvas id="cHazard" aria-label="Resale probability by flat age"></canvas></div>
-      <p class="note">Resales of each lease cohort divided by the flats completed that year, median across cohorts. Source: <a href="https://data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view" target="_blank" rel="noopener">HDB resale data</a> 1990–2026 (all five files under Sources, floor 9) and <a href="https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view" target="_blank" rel="noopener">HDB Property Information</a>.</p>
+      <p class="note">Resales of each lease cohort divided by the flats completed that year, median across cohorts. Source: <a href="https://data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view" target="_blank" rel="noopener">HDB resale data</a> 1990–2026 (all five files under Sources, floor 10) and <a href="https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view" target="_blank" rel="noopener">HDB Property Information</a>.</p>
     </div>
     <div class="panel tint-butter">
       <h3>Our MOP count matches industry research</h3>
@@ -563,35 +584,43 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     </tbody></table></div>
     <p class="note"><b>Limits.</b> Not every move hires a mover (some use a friend's van); our market-share assumption is a share of all estimated moves, so it absorbs this. Moves without a record are missed (moving in with family, leaving Singapore, private-home tenancies), so the true total is likely higher. Timing is approximate: resale moves happen around completion, about 2–3 months after the sale, and BTO owners often renovate before moving in.</p>
   </div>
+  <div class="panel tint-sky" style="margin-top:20px" id="senseBox"></div>
 </section>
 
 <!-- ========================== 2: TOWN CLUSTERS ========================= -->
-<section class="floor" id="f2" data-label="Town clusters" data-short="2">
+
+<!-- ========================== 3: FORECAST CHECK ======================== -->
+<!-- ======================= 2: MARKET AND COMPETITORS ======================= -->
+<section class="floor" id="fM" data-label="Market and competitors" data-short="2">
   <span class="floor-no" aria-hidden="true">2</span>
-  <div class="floor-head"><h2>Towns fall into a few demand profiles</h2>
-    <p class="lede">Not every town moves the same way. We score each of the 26 HDB towns on five things (how often flats are resold, how fast that is growing, how many flats reach MOP soon, how much renting goes on, how many flats are 4-room or bigger) and let k-means put similar towns into groups. The groups tell us what kind of work to expect where, and a second step picks where to park the trucks.</p></div>
-  <div class="grid g2">
+  <div class="floor-head"><h2 id="mkTitle">A crowded market of very small movers</h2>
+    <p class="lede">Who else serves these moves? ACRA's register of every Singapore business lists each firm's activity code; moving companies use SSIC 49232 "Moving services". Prices come from published quotes and price guides. Together they test three of our assumptions: the price, the market share a newcomer can win, and how price-sensitive customers are.</p></div>
+  <div class="kpis" id="mkKpis"></div>
+  <div class="grid g2" style="margin-top:20px">
     <div class="panel">
-      <div class="controls">
-        <label class="rng" style="min-width:150px">Number of groups <output id="kOut">4</output><input id="kIn" type="range" min="2" max="6" value="4"></label>
-        <label class="rng" style="min-width:150px">Number of depots <output id="dOut">2</output><input id="dIn" type="range" min="1" max="3" value="2"></label>
-        <button class="btn ghost" id="rerunK">Replay the grouping</button>
-      </div>
-      <div class="chart-box geo"><canvas id="cMap" aria-label="Map of towns coloured by cluster"></canvas></div>
-      <p class="note">Each bubble is an HDB town at its real location on the map; bigger bubble = more HDB flats; colour = its group. Hover for the town's scores. Black diamonds = suggested depot sites: a second k-means on the towns' locations, pulled towards towns with more estimated moves, so each depot sits close to the most work.</p>
+      <h3>Easy to enter, hard to survive</h3>
+      <div class="chart-box tall"><canvas id="cEntry" aria-label="New moving companies registered each year and the share still live"></canvas></div>
+      <p class="note" id="mkEntryNote"></p>
     </div>
     <div class="panel">
-      <h3>The groups, and what they mean for us</h3>
-      <table id="clusterTable"><thead><tr><th>Group</th><th class="num">Towns</th><th class="num" title="Share of the town's flats resold in the last 12 months">Resold a year</th><th class="num" title="Share of flats completed 2021-2026, which reach MOP by 2031">Reach MOP by 2031</th><th class="num" title="Rental approvals in the last 12 months / flats">Rented out a year</th></tr></thead><tbody></tbody></table>
-      <p class="note">Group averages. Each group is named after what makes it stand out most.</p>
-      <h3 style="margin-top:18px">How many groups?</h3>
-      <div class="chart-box short"><canvas id="cElbow" aria-label="Elbow chart"></canvas></div>
-      <p class="note" id="silNote"></p>
+      <h3>Where competitors are, against where the moves are</h3>
+      <div class="chart-box tall"><canvas id="cCompReg" aria-label="Share of moving companies and of estimated moves by region"></canvas></div>
+      <p class="note" id="mkRegNote"></p>
+    </div>
+  </div>
+  <div class="grid g2e" style="margin-top:20px">
+    <div class="panel">
+      <h3>What the market charges</h3>
+      <table id="priceTable"><thead><tr><th>Who</th><th>Typical price</th><th>Source</th></tr></thead><tbody></tbody></table>
+      <p class="note" id="mkPriceNote"></p>
+    </div>
+    <div class="panel tint-mint">
+      <h3>Five forces, and what they mean for the model</h3>
+      <table id="forcesTable"><thead><tr><th>Force</th><th>Strength</th><th>Evidence and what we do with it</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 </section>
 
-<!-- ========================== 3: FORECAST CHECK ======================== -->
 <section class="floor" id="f3" data-label="Forecast check" data-short="3">
   <span class="floor-no" aria-hidden="true">3</span>
   <div class="floor-head"><h2>The model beats a fair baseline on unseen years</h2>
@@ -676,18 +705,33 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <section class="floor" id="f5" data-label="Fleet sizing" data-short="6">
   <span class="floor-no" aria-hidden="true">6</span>
   <div class="floor-head"><h2 id="nvTitle">Own enough crews to fully cover most months</h2>
-    <p class="lede">Newsvendor logic on capacity. An idle crew costs us its wages and truck (overage). A job beyond capacity goes to a subcontractor at a premium (underage). Own capacity up to the demand quantile where the two balance.</p></div>
+    <p class="lede" id="nvLede">Newsvendor logic on capacity. An idle crew costs us its wages and truck (overage). A job beyond capacity goes to a subcontractor at a premium (underage). Own capacity up to the demand quantile where the two balance.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="controls" id="nvYearChips"></div>
       <div class="chart-box tall"><canvas id="cNV" aria-label="Distribution of monthly jobs with critical quantile"></canvas></div>
-      <p class="note">Our monthly jobs across all simulated futures for that year. The line marks the critical-ratio quantile; capacity is set there.</p>
+      <p class="note" id="nvNote">Our monthly jobs across all simulated futures for that year. The line marks the critical-ratio quantile; capacity is set there.</p>
     </div>
     <div class="panel tint-mint">
       <h3>The critical ratio</h3>
       <div id="crBox"></div>
-      <h3 style="margin-top:16px">Trucks and crews by year</h3>
+      <h3 style="margin-top:16px">Trucks by year</h3>
       <div class="chart-box short"><canvas id="cFleet" aria-label="Fleet size by year"></canvas></div>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="panel">
+      <h3 id="crewTitle">Crews planned month by month</h3>
+      <div class="chart-box tall"><canvas id="cCrew" aria-label="Monthly crew plan against demand and trucks"></canvas></div>
+      <p class="note" id="crewNote"></p>
+      <h3 style="margin-top:20px">What one job earns (2029)</h3>
+      <table id="unitTable"><tbody></tbody></table>
+      <p class="note" id="unitNote"></p>
+    </div>
+    <div class="panel tint-butter">
+      <h3>Why plan crews, not just trucks</h3>
+      <p style="margin-top:6px">A truck costs about S$2,500 a month to hold (depreciation and running); its crew costs S$11,000. Trucks are the capital decision, made once a year; crews are labour and can follow demand. Each month we choose how many crews to staff (never more than the trucks we hold) to maximise expected profit over the 2,000 futures, paying S$3,000 to hire a crew and S$3,000 to release one. This is an aggregate-planning problem, solved exactly by <b>dynamic programming</b> over the 60 months. Trucks are then bought to match the plan's busiest month each year.</p>
+      <div class="kpis" id="crewKpis"></div>
     </div>
   </div>
 </section>
@@ -696,7 +740,7 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
 <section class="floor" id="f6" data-label="Risk" data-short="7">
   <span class="floor-no" aria-hidden="true">7</span>
   <div class="floor-head"><h2 id="riskTitle">Phasing the fleet cuts the downside</h2>
-    <p class="lede">Trucks are fixed assets; the market share we win is not. We simulate 2,000 five-year futures (demand, market mood, share won, price pressure, truck downtime) and run the same futures through four ways of building the fleet.</p></div>
+    <p class="lede">Trucks are fixed assets; the market share we win is not. We simulate 2,000 five-year futures (demand, market mood, share won, price pressure, truck downtime) and run the same futures through five ways of building the fleet, from buying everything on day one to subcontracting every job.</p></div>
   <div class="grid g2">
     <div class="panel">
       <div class="chart-box tall"><canvas id="cRisk" aria-label="Distribution of NPV by strategy"></canvas></div>
@@ -705,11 +749,17 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     <div class="panel">
       <h3>Risk scorecard</h3>
       <table id="riskTable"><thead><tr><th>Strategy</th><th class="num">Mean NPV</th><th class="num">Chance of loss</th><th class="num">Worst 5% avg</th><th class="num">Cash needed</th></tr></thead><tbody></tbody></table>
-      <p class="note">Worst 5% avg = CVaR: the average NPV in the worst 5% of futures. Cash needed = the deepest cumulative cash hole in the worst 5% of futures (the buffer to raise upfront).</p>
+      <p class="note">Worst 5% avg = CVaR: the average NPV in the worst 5% of futures. Cash needed = the deepest cumulative cash hole in the worst 5% of futures (the buffer to raise upfront). <span id="riskCi"></span></p>
       <div class="chart-box short" style="margin-top:12px"><canvas id="cFrontier" aria-label="Risk and return by strategy"></canvas></div>
     </div>
   </div>
   <div class="grid g2e" id="strategyCards"></div>
+  <div class="panel tint-sky" style="margin-top:20px">
+    <h3>Is outsourcing ever better? (make or buy)</h3>
+    <p style="margin-top:6px;max-width:90ch">The asset-light broker above carries S$18,000 a month of overhead and wins 30% less share than a company with its own trucks (assumptions). A founder-run broker could be leaner, and a good brand might not lose share. Same futures, after tax:</p>
+    <table id="brokerTable"><thead><tr><th>Variant</th><th class="num">Mean NPV</th><th class="num">Chance of loss</th><th class="num">Worst 5% avg</th></tr></thead><tbody></tbody></table>
+    <p class="note" id="brokerNote"></p>
+  </div>
 </section>
 
 <!-- ============================= 7: RETURN ============================= -->
@@ -727,21 +777,61 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
     <div class="panel">
       <h3>What moves the NPV most</h3>
       <div class="chart-box tall"><canvas id="cTornado" aria-label="Sensitivity tornado chart"></canvas></div>
-      <p class="note">Mean NPV when each assumption is 20% worse (left) or better (right), all else at base. 600 simulated futures, the same for every bar.</p>
+      <p class="note">Mean NPV when each assumption is 20% worse (left) or better (right), all else at base. 600 simulated futures (the first 600 of the 2,000), the same for every bar, to keep the page fast; their base differs from the 2,000-future headline only by simulation noise, so compare bars with each other.</p>
     </div>
   </div>
 </section>
 
+<!-- =========================== 9: PEAK PRICING =========================== -->
+
 <!-- ========================= 8: RECOMMENDATION ========================= -->
-<section class="floor" id="f8" data-label="Recommendation" data-short="9">
+<section class="floor" id="f2" data-label="Town clusters and depots" data-short="9">
   <span class="floor-no" aria-hidden="true">9</span>
+  <div class="floor-head"><h2>Towns fall into a few demand profiles</h2>
+    <p class="lede">With the fleet and crews decided, where should they work from? Not every town moves the same way. We score each of the 26 HDB towns on five things (how often flats are resold, how fast that is growing, how many flats reach MOP soon, how much renting goes on, how many flats are 4-room or bigger) and let k-means put similar towns into groups. The groups tell us what kind of work to expect where, and a second step picks where to park the trucks.</p></div>
+  <div class="grid g2">
+    <div class="panel">
+      <div class="controls">
+        <label class="rng" style="min-width:150px">Number of groups <output id="kOut">4</output><input id="kIn" type="range" min="2" max="6" value="4"></label>
+        <label class="rng" style="min-width:150px">Number of depots <output id="dOut">2</output><input id="dIn" type="range" min="1" max="3" value="2"></label>
+        <button class="btn ghost" id="rerunK">Replay the grouping</button>
+      </div>
+      <div class="chart-box geo"><canvas id="cMap" aria-label="Map of towns coloured by cluster"></canvas></div>
+      <p class="note">Each bubble is an HDB town at its real location on the map; bigger bubble = more HDB flats; colour = its group. Hover for the town's scores. Black diamonds = suggested depot sites: a second k-means on the towns' locations, pulled towards towns with more estimated moves, so each depot sits close to the most work.</p>
+    </div>
+    <div class="panel">
+      <h3>The groups, and what they mean for us</h3>
+      <table id="clusterTable"><thead><tr><th>Group</th><th class="num">Towns</th><th class="num" title="Share of the town's flats resold in the last 12 months">Resold a year</th><th class="num" title="Share of flats completed 2021-2026, which reach MOP by 2031">Reach MOP by 2031</th><th class="num" title="Rental approvals in the last 12 months / flats">Rented out a year</th></tr></thead><tbody></tbody></table>
+      <p class="note">Group averages. Each group is named after what makes it stand out most.</p>
+      <h3 style="margin-top:18px">How many groups?</h3>
+      <div class="chart-box short"><canvas id="cElbow" aria-label="Elbow chart"></canvas></div>
+      <p class="note" id="silNote"></p>
+    </div>
+  </div>
+</section>
+
+<section class="floor" id="f8" data-label="Recommendation" data-short="10">
+  <span class="floor-no" aria-hidden="true">10</span>
   <h2>Our recommendation</h2>
+  <div class="panel" id="gateBox" style="margin-bottom:20px"></div>
   <div class="grid g2">
     <div class="panel tint-sky" id="recBox"></div>
     <div class="panel">
       <h3>Key assumptions (change them in Assumptions)</h3>
       <table id="assumTable"><tbody></tbody></table>
     </div>
+  </div>
+  <div class="panel tint-butter" style="margin-top:20px">
+    <h3>Limitations: what this analysis cannot tell you</h3>
+    <ul class="limits" style="margin:0;padding-left:20px;max-width:90ch">
+      <li><b>Demand is a proxy.</b> No public data counts moving jobs, so "estimated moves" are built from housing records (floor 1). They miss moves with no record (moving in with family, leaving Singapore, private-home tenancies), and the 50% new-tenancy share of rental approvals is an assumption. Market share is a share of these estimated moves.</li>
+      <li><b>Competitor data counts firms, not their size.</b> ACRA lists registered firms and their status, not revenue or fleet; SSIC 49232 also covers delivery and general lorry firms; locations are registered addresses; prices come from published quotes of different years (floor 2).</li>
+      <li><b>Business numbers are assumptions.</b> Market share, prices, wages, truck costs, subcontractor rates and the 10% discount rate are estimates from published quotes, not data; every one has a slider, and the tornado chart (floor 8) shows which matter most.</li>
+      <li><b>Tax is simplified.</b> Corporate tax (17%) with the start-up and partial exemptions, 3-year capital allowances and loss carry-forward is included, but temporary rebates are left out, tax is paid at the end of each year rather than the following year, and working capital (customer payment delays) is ignored.</li>
+      <li><b>Simulation noise.</b> 2,000 futures pin each mean NPV to within about <span id="limCi"></span> (95%), and other random seeds give the recommended plan <span id="limSeed"></span> at base (notebook §9b). Floors 5 and 8 use 600 futures to stay fast, so their base differs from the headline by this noise.</li>
+      <li><b>Customer price response is assumed.</b> The rate card's value depends on an elasticity no public data measures (the rooftop shows the break-even).</li>
+      <li><b>Simplified operations.</b> Crews are planned on average demand across futures, one schedule for all of them (no overtime, no re-planning within a future), and hiring and release costs are assumptions; depots come from k-means on towns weighted by moves, not from travel times; condo and landed moves are split across regions with 2020 Census shares; rule changes are dated from secondary sources.</li>
+    </ul>
   </div>
   <div class="panel" style="margin-top:20px">
     <h3>Sources</h3>
@@ -760,9 +850,50 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
       <li><a href="https://propertyreviewsg.com/complete-timeline-of-singapores-property-cooling-measures/" target="_blank" rel="noopener">Timeline of Singapore's property cooling measures</a> (1996–2025 rule changes: ABSD, LTV, TDSR, PR wait, 15-month wait-out)</li>
       <li><a href="https://sg.news.yahoo.com/government-removes-15-month-wait-031926809.html" target="_blank" rel="noopener">Government removes 15-month wait-out</a> (28 July 2026)</li>
       <li><a href="https://www.orangetee.com/ResearchHubFiles/Items/582/20251120141338-7bea9593HDB%20Market%20Outlook%202026_final.pdf" target="_blank" rel="noopener">OrangeTee, HDB Market Outlook 2026</a> (MOP counts used to validate)</li>
+      <li><a href="https://beta.data.gov.sg/datasets/2/view" target="_blank" rel="noopener">ACRA, Information on Corporate Entities</a> (data.gov.sg; every firm with SSIC 49232 "Moving services", pulled 3 Nov 2026; floor 2)</li>
+      <li>Mover prices: <a href="https://blog.moneysmart.sg/budgeting/cheap-house-movers-moving-services/" target="_blank" rel="noopener">MoneySmart, cheap house movers</a>; <a href="https://www.lalamove.com/en-sg/all-vehicle-pricing-detail" target="_blank" rel="noopener">Lalamove vehicle pricing</a>; <a href="https://airtasker.com/sg/costs/removals/how-much-does-mover-cost" target="_blank" rel="noopener">Airtasker removal costs</a>; <a href="https://www.homejourney.sg/blog/moving-service-price-singapore-2026-cost-guide-202602212002" target="_blank" rel="noopener">Homejourney moving price guide 2026</a> (floor 2)</li>
+      <li><a href="https://www.singstat.gov.sg/find-data/explore-data-themes/households/resident-households/latest-news-data" target="_blank" rel="noopener">SingStat, resident households</a> (1,487,100 in 2025; sense check on floor 1)</li>
+      <li><a href="https://www.globest.com/amp/2025/09/15/household-mobility-reaches-record-low-in-2024/" target="_blank" rel="noopener">GlobeSt, US household mobility reaches record low in 2024</a> (US Census Bureau data: 11.8% of people moved)</li>
       <li><a href="https://blog.spaceship.com.sg/comparison-of-mover-price-and-service-in-singapore" target="_blank" rel="noopener">Spaceship, mover price comparison</a> (4-room HDB move quoted at $883–$980)</li>
       <li><a href="https://dollarsandsense.sg/business/cost-guide-to-buying-a-commercial-vehicle-in-singapore/" target="_blank" rel="noopener">DollarsAndSense, commercial vehicle cost guide</a> (lorry about $124k with COE)</li>
     </ul>
+  </div>
+</section>
+<section class="floor" id="fP" data-label="Rooftop: peak pricing" data-short="R">
+  <span class="floor-no" aria-hidden="true">R</span>
+  <div class="floor-head"><h2 id="prTitle">Peak pricing</h2>
+    <p class="lede"><b>One more lever, on top of the recommendation.</b> Everything below the roof sets one price all year. Trucks are bought for busy months and sit partly idle in quiet ones. A rate card that charges more in the busiest months and less in the quietest flattens the year: some customers move their date, peak jobs earn more, and the same work needs fewer trucks. How customers react is not in any public data, so it is set with the sliders and tested across a range below.</p></div>
+  <div class="grid g2">
+    <div class="panel">
+      <div class="controls" id="prYearChips"></div>
+      <div class="chart-box tall"><canvas id="cPrice" aria-label="Average jobs per month with flat and peak pricing, against owned capacity"></canvas></div>
+      <p class="note" id="prNote"></p>
+    </div>
+    <div class="panel tint-mint">
+      <h3>Rate card</h3>
+      <div id="prCard"></div>
+      <h3 style="margin-top:16px">Where the peaks are</h3>
+      <div class="chart-box short"><canvas id="cSeason" aria-label="Seasonal index of HDB resales by month"></canvas></div>
+      <h3 style="margin-top:16px">How customers respond (assumptions)</h3>
+      <div class="pr-sliders">
+        <label class="rng">Peak premium <output id="o_peakUp"></output><input type="range" id="i_peakUp" min="0" max="0.3" step="0.01"></label>
+        <label class="rng">Off-peak discount <output id="o_offDown"></output><input type="range" id="i_offDown" min="0" max="0.25" step="0.01"></label>
+        <label class="rng">Peak customers who can move their date <output id="o_flex"></output><input type="range" id="i_flex" min="0" max="0.5" step="0.05"></label>
+        <label class="rng">Price sensitivity (elasticity) <output id="o_elast"></output><input type="range" id="i_elast" min="0" max="3" step="0.1"></label>
+      </div>
+    </div>
+  </div>
+  <div class="grid g2e" style="margin-top:20px">
+    <div class="panel">
+      <h3 id="prHead">One price vs the rate card</h3>
+      <table id="prTable"><thead><tr><th></th><th class="num">One price</th><th class="num">Rate card</th><th class="num">Change</th></tr></thead><tbody></tbody></table>
+      <p class="note">The same 2,000 futures for both columns, so the difference is the pricing alone. Crews and trucks are re-planned on the reshaped demand.</p>
+    </div>
+    <div class="panel">
+      <h3>How sure are we?</h3>
+      <table id="prGrid"></table>
+      <p class="note" id="prGridNote"></p>
+    </div>
   </div>
 </section>
 </main>
@@ -790,6 +921,8 @@ tr.pa-hit td{background:#FFF6DF;transition:background .4s}
   <h3>Assumptions</h3>
   <p class="note">Every chart recomputes when you change these. Defaults are our base case.</p>
   <div id="sliders"></div>
+  <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px"><input type="checkbox" id="taxIn" checked> Corporate tax (17%, start-up and partial exemptions, 3-year capital allowances)</label>
+  <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px"><input type="checkbox" id="crewIn" checked> Plan crews month by month (off: one full-time crew per truck)</label>
   <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px"><input type="checkbox" id="tvIn"> Count business value after 2031 (3× final-year cash flow)</label>
   <button class="btn ghost" id="resetBtn" style="margin-top:16px">Reset to base case</button>
 </aside>
@@ -863,6 +996,12 @@ const fmtK = v => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(
 const money = v => (v < 0 ? '−S$' : 'S$') + fmtK(Math.abs(v));
 const moneyD = v => (v >= 0 ? '+' : '') + money(v);     // a change, always signed
 const pct = (v, d = 0) => (v * 100).toFixed(d) + '%';
+const aPct = (v, d = 0) => (/^(8|11|18)(\D|$)/.test(pct(v, d)) ? 'an ' : 'a ') + pct(v, d);   // "an 81%", "a 37%"
+// 95% interval half-width of a mean estimated from simulated futures (Monte Carlo error)
+const ci95 = a => 1.96 * std(Array.from(a), 1) / Math.sqrt(a.length);
+// range of the recommended plan's mean NPV over five random seeds at base (notebook §9b; update if the model changes)
+const SEED_RANGE = 'S$407k–430k';
+const isBase = () => !useTV && Object.keys(BASE).every(k => A[k] === BASE[k]);
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 /* ==========================================================================
@@ -1125,7 +1264,14 @@ const BASE = {
   recYear: 2028,
   recPriceHit: 0.10,    // our prices drop this much in a recession year (customers trade down; assumption)
   polMode: 'random',    // 'random' | 'frozen' | 'loosen' | 'tighten' (one major step in July of polYear)
-  polYear: 2028
+  polYear: 2028,
+  // Peak pricing (rooftop). Customer response is NOT in any public data: these are assumptions with sliders
+  peakUp: 0.15,         // price premium in the 3 busiest calendar months
+  offDown: 0.10,        // discount in the 3 quietest calendar months
+  flex: 0.20,           // share of peak-month customers who can move their date a few weeks to a cheaper month
+  elast: 1.2,           // price elasticity of OUR demand (1.2: a 10% higher price loses ~11% of jobs to rivals)
+  taxOn: true,          // Singapore corporate tax on the cash flows (section 7d)
+  crewPlan: true        // crews planned month by month (section 7e); false = one full-time crew per truck
 };
 const FIXED = {
   shareStart: 0.005,    // share in month 1
@@ -1140,7 +1286,11 @@ const FIXED = {
   brokerShare: 0.70,    // asset-light broker wins 30% less share (no own brand fleet)
   brokerFrac: 0.85,     // broker pays subcontractors 85% of the price
   brokerCap: 0.85,      // broker can place at most 85% of jobs
-  tvMult: 3, nsim: 2000, seed: 2027, H: 60
+  tvMult: 3, nsim: 2000, seed: 2027, H: 60,
+  taxRate: 0.17,        // Singapore corporate income tax rate (IRAS)
+  caYears: 3,           // capital allowances: lorries written off over 3 years (Section 19A(1))
+  hireCost: 3000,       // recruiting + training one crew (3 movers + driver), agency fees included (assumption)
+  releaseCost: 3000     // releasing one crew: notice pay / agency exit (assumption)
 };
 const SLIDERS = [
   ['shareTarget','Market share we win',0.01,0.06,0.0025,v=>pct(v,1)],
@@ -1234,7 +1384,9 @@ function genScenarios(a, nsim = FIXED.nsim, seed = FIXED.seed) {
    paying for crews that sit idle in quiet months.
    ========================================================================== */
 function newsvendor(a) {
-  const Co = (a.crewCost + a.truckCapex / FIXED.truckLife / 12 + FIXED.truckRun) / a.jobsPerCrew;
+  // With monthly crew planning (7e) the truck decision is separate from the crew decision: an idle
+  // truck slot only costs the truck, because its crew is not hired that month. Without it, the crew comes with the truck.
+  const Co = ((a.crewPlan ? 0 : a.crewCost) + a.truckCapex / FIXED.truckLife / 12 + FIXED.truckRun) / a.jobsPerCrew;
   const avgPrice = a.priceHDB;        // HDB-dominated average; good enough for the ratio
   const Cu = a.subFrac * avgPrice - FIXED.varCost;
   return { Co, Cu, CR: Cu / (Cu + Co) };
@@ -1248,6 +1400,9 @@ function newsvendor(a) {
      phased   buy trucks year by year as demand grows (never sell): staged
               investment keeps the option to stop if the launch is weak
      broker   own no trucks; pass every job to subcontractors (asset-light)
+     hybrid   broker first, then phased: subcontract everything in year 1 (no
+              trucks or crews, 30% less share), then buy trucks in phases from
+              2028 once demand is proven: outsource while uncertain, insource later
    Every strategy also uses subcontractors as overflow (up to subCap of
    demand) - the "recourse" that makes the newsvendor safe on busy months.
    ========================================================================== */
@@ -1255,61 +1410,96 @@ const STRATS = [
   { id: 'buy', name: 'Buy fleet upfront', color: '--c2' },
   { id: 'lease', name: 'Lease and resize yearly', color: '--c3' },
   { id: 'phased', name: 'Phased buying', color: '--c1' },
-  { id: 'broker', name: 'Asset-light broker', color: '--c4' }
+  { id: 'broker', name: 'Asset-light broker', color: '--c4' },
+  { id: 'hybrid', name: 'Broker first, then phased', color: '--c5' }
 ];
+// The recommended plan: every floor that studies one plan in depth (crew plan, pricing, go/no-go) uses it.
+const REC = 'hybrid', recName = () => STRATS.find(s => s.id === REC).name;
+// fleet + crew plan made in advance (trucks and crews per month), handed to runStrategy as `plan`
+const planOf = r => ({ T: Int32Array.from(r.T), W: Int32Array.from(r.W) });
 // plan (optional) = a fleet plan fixed in advance (trucks per month); used by the stress test,
 // where the plan is made from the normal forecast and the shock then arrives unannounced.
-function runStrategy(id, sc, a, plan = null) {
+function runStrategy(id, sc, a, plan = null, pr = null) {
   const H = FIXED.H, nsim = sc.length, nv = newsvendor(a);
-  const shareMul = id === 'broker' ? FIXED.brokerShare : 1;
+  // broker months: the broker strategy always; 'broker first' during its first 12 months (no trucks or crews yet)
+  const brk = t => id === 'broker' || (id === 'hybrid' && t < 12);
+  const bShare = a.brokerShareMul ?? FIXED.brokerShare, bOver = a.brokerOverhead ?? FIXED.overhead * 0.6;
   const effCap = a.jobsPerCrew * (1 - FIXED.downtime);
   // our demand (jobs) and blended price, per future and month
-  const D = sc.map(s => Float64Array.from({ length: H }, (_, t) => s.share[t] * shareMul * (s.res[t] + s.rent[t] + s.bto[t] + s.priv[t])));
+  const D = sc.map(s => Float64Array.from({ length: H }, (_, t) => s.share[t] * (brk(t) ? bShare : 1) * (s.res[t] + s.rent[t] + s.bto[t] + s.priv[t])));
   const P = sc.map(s => Float64Array.from({ length: H }, (_, t) => {
     const r = s.res[t], re = s.rent[t], b = s.bto[t], p = s.priv[t];
     return (r * a.priceHDB + re * a.priceHDB * 0.55 + b * a.priceHDB + p * a.priceHDB * 1.22) / (r + re + b + p) * s.drift[t];
   }));
+  if (pr) applyPricing(D, P, pr);          // peak pricing reshapes demand BEFORE the fleet is sized (section 7b)
   // newsvendor fleet size for year k: CR-quantile of all simulated months in that year
   const fleetFor = k => { const v = []; for (const d of D) for (let t = k * 12; t < k * 12 + 12; t++) v.push(d[t]);
     return Math.ceil(quantile(v, nv.CR) / effCap); };
   const T = new Int32Array(H);
   if (id === 'buy') T.fill(fleetFor(2));
   if (id === 'lease') for (let k = 0; k < 5; k++) T.fill(fleetFor(k), k * 12, k * 12 + 12);
-  if (id === 'phased') { let mx = 0; for (let k = 0; k < 5; k++) { mx = Math.max(mx, fleetFor(k)); T.fill(mx, k * 12, k * 12 + 12); } }
-  if (plan) T.set(plan);
+  if (id === 'phased' || id === 'hybrid') { let mx = 0; for (let k = id === 'hybrid' ? 1 : 0; k < 5; k++) { mx = Math.max(mx, fleetFor(k)); T.fill(mx, k * 12, k * 12 + 12); } }
+  if (plan) T.set(plan.T || plan);
+  const df = Array.from({ length: H }, (_, t) => Math.pow(1 + a.disc, -(t + 1) / 12));
+  // crews per month: planned by dynamic programming (7e), or one per truck.
+  // With crew planning the newsvendor fleet above is only a ceiling; the crew plan then sets the trucks
+  // actually held: each year's busiest planned month (buy: the busiest month of all five years; phased:
+  // never sell, so the running maximum), so no truck is bought that no crew will drive.
+  const crewMode = !!a.crewPlan && id !== 'broker';
+  let W;
+  if (!crewMode) W = Int32Array.from(T);
+  else if (plan && plan.W) W = Int32Array.from(plan.W);
+  else {
+    W = planCrews(D, P, sc, T, a, id, df);
+    const yMax = [0, 1, 2, 3, 4].map(k => Math.max(...W.slice(k * 12, k * 12 + 12)));
+    if (id === 'buy') T.fill(Math.max(...yMax));
+    if (id === 'lease') for (let k = 0; k < 5; k++) T.fill(yMax[k], k * 12, k * 12 + 12);
+    if (id === 'phased' || id === 'hybrid') { let mx = 0; for (let k = 0; k < 5; k++) { mx = Math.max(mx, yMax[k]); T.fill(mx, k * 12, k * 12 + 12); } }
+  }
   // capital spending
   const capex = new Float64Array(H);
   if (id === 'buy') capex[0] = T[0] * a.truckCapex;
-  if (id === 'phased') { capex[0] = T[0] * a.truckCapex; for (let k = 1; k < 5; k++) capex[k * 12] = (T[k * 12] - T[k * 12 - 1]) * a.truckCapex; }
+  if (id === 'phased' || id === 'hybrid') { capex[0] = T[0] * a.truckCapex; for (let k = 1; k < 5; k++) capex[k * 12] = (T[k * 12] - T[k * 12 - 1]) * a.truckCapex; }
   // book value of owned trucks after 5 years (straight-line over truckLife) = residual value
   let resid = 0;
-  if (id === 'buy' || id === 'phased') for (let t = 0; t < H; t++) if (capex[t] > 0) resid += capex[t] * Math.max(0, 1 - (H - t) / 12 / FIXED.truckLife);
-
-  const npv = new Float64Array(nsim), minCash = new Float64Array(nsim), payback = new Float64Array(nsim);
-  const cumPaths = [], cfMean = new Float64Array(H); let lostJobs = 0, allJobs = 0, ownJobs = 0, capSlots = 0, revTot = 0;
-  const df = Array.from({ length: H }, (_, t) => Math.pow(1 + a.disc, -(t + 1) / 12));
+  if (id === 'buy' || id === 'phased' || id === 'hybrid') for (let t = 0; t < H; t++) if (capex[t] > 0) resid += capex[t] * Math.max(0, 1 - (H - t) / 12 / FIXED.truckLife);
+  // tax: capital allowances per year (3-year write-off of each purchase) and the tax written-down value left at the end
+  const tax = !!a.taxOn, caY = new Float64Array(5); let wdvEnd = 0;
+  for (let t = 0; t < H; t++) if (capex[t] > 0) { const k0 = Math.floor(t / 12);
+    for (let j = 0; j < FIXED.caYears; j++) if (k0 + j < 5) caY[k0 + j] += capex[t] / FIXED.caYears;
+    wdvEnd += capex[t] * Math.max(0, k0 + FIXED.caYears - 5) / FIXED.caYears; }
+  const balCharge = resid - wdvEnd;          // selling the trucks at book value: taxable above the tax written-down value
+  const npv = new Float64Array(nsim), npvPre = new Float64Array(nsim), minCash = new Float64Array(nsim), payback = new Float64Array(nsim);
+  const cumPaths = [], cfs = [], cfMean = new Float64Array(H); let lostJobs = 0, allJobs = 0, ownJobs = 0, capSlots = 0, revTot = 0, taxTot = 0;
   for (let s = 0; s < nsim; s++) {
-    let cum = 0, mn = 0, pb = NaN, v = 0; const path = new Float64Array(H), opLast = [];
+    let cum = 0, mn = 0, pb = NaN, v = 0, vPre = 0, opYear = 0, lossCF = 0; const path = new Float64Array(H), opLast = [], cfRow = new Float64Array(H);
     for (let t = 0; t < H; t++) {
       const d = D[s][t], price = P[s][t];
-      const cap = T[t] * effCap * sc[s].capNoise[t];
+      const cap = W[t] * effCap * sc[s].capNoise[t];
       const own = Math.min(d, cap), over = d - own;
-      const sub = id === 'broker' ? Math.min(over, FIXED.brokerCap * d) : Math.min(over, FIXED.subCap * d);
+      const sub = brk(t) ? Math.min(over, FIXED.brokerCap * d) : Math.min(over, FIXED.subCap * d);
       const lost = over - sub;
-      const subF = id === 'broker' ? FIXED.brokerFrac : a.subFrac;
+      const subF = brk(t) ? FIXED.brokerFrac : a.subFrac;
       const rev = (own + sub) * price;
-      let cost = own * FIXED.varCost + sub * price * subF + T[t] * (a.crewCost + FIXED.truckRun)
-               + FIXED.overhead * (id === 'broker' ? 0.6 : 1) + FIXED.marketing * rev;
+      let cost = own * FIXED.varCost + sub * price * subF + W[t] * a.crewCost + T[t] * FIXED.truckRun
+               + (brk(t) ? bOver : FIXED.overhead) + FIXED.marketing * rev;
       if (id === 'lease') cost += T[t] * FIXED.truckLease;
+      if (crewMode) { const dW = W[t] - (t ? W[t - 1] : 0); cost += dW > 0 ? dW * FIXED.hireCost : -dW * FIXED.releaseCost; }
       const op = rev - cost; let cf = op - capex[t];
       if (t >= H - 12) opLast.push(op);
-      if (t === H - 1) { cf += resid; if (useTV) cf += Math.max(0, FIXED.tvMult * sum(opLast)); }
-      cum += cf; path[t] = cum; mn = Math.min(mn, cum); v += cf * df[t]; cfMean[t] += cf / nsim;
+      if (t === H - 1) { cf += resid; if (useTV) cf += Math.max(0, FIXED.tvMult * sum(opLast) * (tax ? 1 - FIXED.taxRate : 1)); }
+      vPre += cf * df[t];
+      // corporate tax for the calendar year, paid at its end (7d)
+      opYear += op;
+      if (tax && t % 12 === 11) { const k = Math.floor(t / 12), ty = taxFor(opYear - caY[k] + (k === 4 ? balCharge : 0), lossCF, k);
+        lossCF = ty.lossCF; cf -= ty.tax; taxTot += ty.tax; }
+      if (t % 12 === 11) opYear = 0;
+      cum += cf; path[t] = cum; mn = Math.min(mn, cum); v += cf * df[t]; cfMean[t] += cf / nsim; cfRow[t] = cf;
       if (isNaN(pb) && cum > 0 && t > 0) pb = t + 1;
       lostJobs += lost; allJobs += d; ownJobs += own; capSlots += cap; revTot += rev;
     }
     if (cum <= 0) pb = NaN;
-    npv[s] = v; minCash[s] = mn; payback[s] = pb; cumPaths.push(path);
+    npv[s] = v; npvPre[s] = vPre; minCash[s] = mn; payback[s] = pb; cumPaths.push(path); cfs.push(cfRow);
   }
   const sorted = Float64Array.from(npv).sort(), k5 = Math.max(1, Math.floor(nsim * 0.05));
   // cumulative cash percentiles over time (for the ROI chart)
@@ -1323,7 +1513,7 @@ function runStrategy(id, sc, a, plan = null) {
     paybackMedian: pbOk.length > nsim / 2 ? median(pbOk) : NaN, pPayback: pbOk.length / nsim,
     irr: irr(Array.from(cfMean)), band, cfMean,
     lostShare: lostJobs / allJobs, util: id === 'broker' ? NaN : ownJobs / capSlots, revPerYear: revTot / nsim / 5,
-    D
+    D, W: Array.from(W), meanNPVPre: mean(npvPre), taxPerYear: taxTot / nsim / 5, cfs, df
   };
 }
 // IRR of a monthly cash-flow series (bisection on the monthly rate), returned as an annual rate
@@ -1332,6 +1522,153 @@ function irr(cf) {
   let lo = -0.09, hi = 0.5; if (npvAt(lo) * npvAt(hi) > 0) return NaN;
   for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; (npvAt(lo) * npvAt(mid) <= 0) ? hi = mid : lo = mid; }
   return Math.pow(1 + (lo + hi) / 2, 12) - 1;
+}
+
+/* ==========================================================================
+   7b. PEAK PRICING (revenue management on top of the fleet decision)
+   A published rate card with three tiers by calendar month:
+     peak      the 3 months with the highest seasonal index S (busiest)  price x (1 + peakUp)
+     off-peak  the 3 months with the lowest S (quietest)                 price x (1 - offDown)
+     normal    the other 6 months                                        list price
+   Customer response, applied to our monthly jobs in every simulated future:
+     1. elasticity   jobs in each month scale by (price multiplier)^(-elast):
+                     the premium loses some peak jobs to rivals, the discount
+                     wins extra jobs in quiet months
+     2. date shift   a share `flex` of peak-month customers (those whose date is
+                     not fixed, e.g. owners waiting on renovation) move to the
+                     off-peak months of the same year and pay the off-peak price.
+                     Discounted slots are only released up to an average month's
+                     volume (capacity control), so quiet months fill up but never
+                     become the new peak; flexible customers beyond that stay put
+   The newsvendor then sizes the fleet on the reshaped demand, so a flatter
+   year needs fewer trucks. The critical ratio itself keeps the list price
+   (conservative: a higher peak price would justify slightly more capacity).
+   No public data measures how Singapore movers' customers respond to price,
+   so flex and elast are assumptions; the rooftop shows how the result changes
+   across a range of both.
+   ========================================================================== */
+/* ==========================================================================
+   7d. CORPORATE TAX (Singapore, IRAS rules; CIT rebates left out because they are temporary)
+   Yearly, per future:  chargeable = operating profit - capital allowances (+ balancing charge on the
+   trucks' sale value in the final year), less losses brought forward (carried forward without limit,
+   assuming the shareholding test is met). Exempt part: start-up exemption in the first 3 years
+   (75% of the first S$100k, 50% of the next S$100k), partial exemption afterwards (75% of the
+   first S$10k, 50% of the next S$190k). Tax = 17% of the rest, paid at the end of the year
+   (simplification: in practice it is paid the following year, so this is slightly conservative).
+   ========================================================================== */
+function taxFor(chargeable, lossCF, k) {
+  if (chargeable <= 0) return { tax: 0, lossCF: lossCF - chargeable };
+  const use = Math.min(lossCF, chargeable), ci = chargeable - use;
+  const ex = k < 3 ? 0.75 * Math.min(ci, 100000) + 0.5 * Math.min(Math.max(ci - 100000, 0), 100000)
+                   : 0.75 * Math.min(ci, 10000) + 0.5 * Math.min(Math.max(ci - 10000, 0), 190000);
+  return { tax: FIXED.taxRate * (ci - ex), lossCF: lossCF - use };
+}
+/* ==========================================================================
+   7e. MONTHLY CREW PLANNING (aggregate planning by dynamic programming)
+   Trucks are the capital decision (newsvendor, section 6). Crews are labour and can follow the
+   seasons: each month choose W crews, 0 <= W <= trucks that month. Objective: maximise expected
+   discounted profit over the 60 months, averaged over the simulated futures, minus the cost of
+   changing the crew level (S$3,000 to hire a crew, S$3,000 to release one).
+     g[t][W] = discount(t) x ( mean over futures of [revenue - own variable cost - subcontract cost
+               - marketing] with W crews of capacity - W x crew cost )
+     best[t][W] = g[t][W] + max over W' of ( best[t-1][W'] - change cost(W' -> W) x discount(t) ),
+     starting from no crews. The plan is one schedule for all futures (decided in advance, like the
+     fleet), so 60 numbers fitted on 2,000 futures: overfitting is negligible.
+   g is rounded to the cent so ties break the same way in the app and the notebook (lowest W wins).
+   ========================================================================== */
+function planCrews(D, P, sc, T, a, id, df) {
+  const H = FIXED.H, n = D.length, effCap = a.jobsPerCrew * (1 - FIXED.downtime), subF = a.subFrac;
+  let prev = new Float64Array([0]); const back = [];
+  for (let t = 0; t < H; t++) {
+    const nW = T[t] + 1, g = new Float64Array(nW);
+    for (let w = 0; w < nW; w++) { let acc = 0;
+      for (let s = 0; s < n; s++) { const d = D[s][t], p = P[s][t], cap = w * effCap * sc[s].capNoise[t];
+        const own = Math.min(d, cap), sub = Math.min(d - own, FIXED.subCap * d), rev = (own + sub) * p;
+        acc += rev - own * FIXED.varCost - sub * p * subF - FIXED.marketing * rev; }
+      g[w] = Math.round((acc / n - w * a.crewCost) * df[t] * 100) / 100; }
+    const cur = new Float64Array(nW).fill(-Infinity), arg = new Int32Array(nW);
+    for (let w = 0; w < nW; w++) {
+      for (let wp = 0; wp < prev.length; wp++) { const c = prev[wp] - (w > wp ? FIXED.hireCost * (w - wp) : FIXED.releaseCost * (wp - w)) * df[t];
+        if (c > cur[w]) { cur[w] = c; arg[w] = wp; } }
+      cur[w] += g[w]; }
+    back.push(arg); prev = cur;
+  }
+  let w = 0; for (let k = 1; k < prev.length; k++) if (prev[k] > prev[w]) w = k;
+  const W = new Int32Array(H); for (let t = H - 1; t >= 0; t--) { W[t] = w; w = back[t][w]; }
+  return W;
+}
+function priceTiers() {                          // +1 peak, -1 off-peak, 0 normal, per calendar month
+  const order = MODEL.S.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+  const tier = new Array(12).fill(0); order.slice(0, 3).forEach(i => tier[i] = -1); order.slice(9).forEach(i => tier[i] = 1);
+  return tier;
+}
+function applyPricing(D, P, pr) {
+  const tier = priceTiers(), H = FIXED.H;
+  const mult = tier.map(k => k > 0 ? 1 + pr.peakUp : k < 0 ? 1 - pr.offDown : 1);
+  const vol = mult.map(m => Math.pow(m, -pr.elast));
+  for (let s = 0; s < D.length; s++) {
+    const d = D[s];
+    for (let t = 0; t < H; t++) { d[t] *= vol[t % 12]; P[s][t] *= mult[t % 12]; }   // 1. price response
+    for (let k = 0; k < H / 12; k++) {             // 2. date shifts, inside the same calendar year
+      let avg = 0, want = 0, room = 0;
+      for (let mon = 0; mon < 12; mon++) avg += d[k * 12 + mon] / 12;
+      for (let mon = 0; mon < 12; mon++) { const v = d[k * 12 + mon];
+        if (tier[mon] > 0) want += v * pr.flex; else if (tier[mon] < 0) room += Math.max(0, avg - v); }
+      if (want <= 0 || room <= 0) continue;
+      const moved = Math.min(want, room), take = moved / want, fill = moved / room;
+      for (let mon = 0; mon < 12; mon++) { const t = k * 12 + mon;
+        if (tier[mon] > 0) d[t] -= d[t] * pr.flex * take;
+        else if (tier[mon] < 0) d[t] += Math.max(0, avg - d[t]) * fill; }
+    }
+  }
+}
+const pricingOf = a => ({ peakUp: a.peakUp, offDown: a.offDown, flex: a.flex, elast: a.elast });
+
+/* ==========================================================================
+   7c. GO / NO-GO AND THE STAGE GATE
+   Is the recommended plan worth the cash it puts at risk, and when should we stop?
+     break-even share  the target market share at which the plan's mean
+                       NPV is zero: bisection on shareTarget, 600 futures (the
+                       tornado's), everything else at the current assumptions
+     P(reach it)       chance that the share we actually win (triangular
+                       0.5x-1x-1.3x of the target, section 5) is at least that
+     stage gate        on the break-even path, the share we should have after
+                       12 months (the S-curve ramp at month 12), turned into jobs
+                       a month using the simulated market in Dec 2027. Below it,
+                       stop: do not buy trucks (the plan owns none in year 1).
+     value of stopping in each future, at the end of Dec 2027: if our jobs that
+                       month are below the gate, close the broker business:
+                       NPV = that future's discounted cash flows of 2027 only
+                       (no trucks to sell, no crews to release). Otherwise go on
+                       as planned. Compared with always going on = the value of
+                       the option to abandon.
+     verdict           no-go if mean NPV <= 0; go if the chance of loss is
+                       under 20%; otherwise go with conditions (the gate)
+   ========================================================================== */
+function computeGate(results) {
+  const ph = results[REC], n = 600;
+  const npvAt = s => { const a = { ...A, shareTarget: s }; return mean(runStrategy(REC, genScenarios(a, n), a).npv); };
+  let lo = 0.005, hi = 0.08, be = NaN;
+  if (npvAt(lo) < 0 && npvAt(hi) > 0) { for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; npvAt(mid) < 0 ? lo = mid : hi = mid; } be = (lo + hi) / 2; }
+  // triangular(0.5T, T, 1.3T) survival at be
+  const T = A.shareTarget, a = 0.5 * T, c = T, b = 1.3 * T;
+  const cdf = x => x <= a ? 0 : x >= b ? 1 : x <= c ? (x - a) ** 2 / ((b - a) * (c - a)) : 1 - (b - x) ** 2 / ((b - a) * (b - c));
+  const pReach = isNaN(be) ? NaN : 1 - cdf(be);
+  const ramp11 = 1 / (1 + Math.exp(-(11 - A.rampMonths / 2) / (A.rampMonths / 8)));
+  const gateShare = FIXED.shareStart + (be - FIXED.shareStart) * ramp11;
+  const mkt11 = mean(LAST.sc.map(s => s.res[11] + s.rent[11] + s.bto[11] + s.priv[11]));
+  const gateJobs = gateShare * (REC === 'hybrid' ? (A.brokerShareMul ?? FIXED.brokerShare) : 1) * mkt11;   // as a broker in year 1
+  const verdict = ph.meanNPV <= 0 ? 'No-go' : ph.pLoss < 0.2 ? 'Go' : 'Go, with conditions';
+  // value of the option to stop at the gate (only meaningful while the plan owns no trucks in 2027)
+  let stop = null;
+  if (REC === 'hybrid' && !isNaN(be)) {
+    const N = ph.npv.length, npvG = new Float64Array(N); let nS = 0, sS = 0, sC = 0;
+    for (let s = 0; s < N; s++) {
+      if (ph.D[s][11] < gateJobs) { let v = 0; for (let t = 0; t < 12; t++) v += ph.cfs[s][t] * ph.df[t]; npvG[s] = v; nS++; sS += v; sC += ph.npv[s]; }
+      else npvG[s] = ph.npv[s]; }
+    stop = { pStop: nS / N, ifStop: nS ? sS / nS : NaN, ifCont: nS ? sC / nS : NaN, meanNPV: mean(npvG), pLoss: Array.from(npvG).filter(v => v < 0).length / N };
+  }
+  return { be, pReach, gateShare, gateJobs, mkt11, verdict, ci: ci95(ph.npv), perRisk: ph.meanNPV / ph.cashNeed, stop };
 }
 
 /* ==========================================================================
@@ -1622,6 +1959,100 @@ function renderFloor1() {
   $('#mopTable tbody').innerHTML = Object.entries(ot).map(([y, v]) =>
     `<tr><td>${y}</td><td class="num">${fmt(m.U[y - 5] || 0)}</td><td class="num">${fmt(v)}</td></tr>`).join('');
   drawStreams();
+  renderSense();
+}
+/* ==========================================================================
+   FLOOR 2: MARKET AND COMPETITORS
+   Competitors: ACRA "Information on Corporate Entities" (data.gov.sg), every entity with SSIC 49232
+   "Moving services" as primary or secondary activity, summarised by tools/build_competitors.py into
+   DATA.competitors. Live = status starting "Live". Entry chart: firms registered each year with moving
+   as their MAIN activity, and the share of each year's firms still live today (a snapshot of survival
+   by age, since the register has no closure dates). Region: by registered postal sector (approximate).
+   Market size: estimated moves (upper count, and arrivals only) x the average price for 2025's mix.
+   Prices: published quotes (sources in the table).
+   ========================================================================== */
+const PRICES = [
+  ['Lorry trip, budget movers (half / full load)', 'S$149–300 a trip', 'MoneySmart, cheap house movers (2025)', 'https://blog.moneysmart.sg/budgeting/cheap-house-movers-moving-services/'],
+  ['App platforms: GoGoX 14ft lorry; Lalamove helpers', 'S$380+ a trip; +S$40 a helper', 'MoneySmart (2025); Lalamove price list', 'https://www.lalamove.com/en-sg/all-vehicle-pricing-detail'],
+  ['Freelancer marketplace, 4-room / 5-room HDB', 'S$700 / S$900 average', 'Airtasker cost guide (2023)', 'https://airtasker.com/sg/costs/removals/how-much-does-mover-cost'],
+  ['Established movers, 4-room HDB (3 quotes)', 'S$883–980', 'Spaceship price comparison (2020)', 'https://blog.spaceship.com.sg/comparison-of-mover-price-and-service-in-singapore'],
+  ['Price guide, 4–5 room HDB', 'S$800–1,500 (standard 1,000–1,200)', 'Homejourney moving price guide (2026)', 'https://www.homejourney.sg/blog/moving-service-price-singapore-2026-cost-guide-202602212002'],
+  ['Price guide, condo / landed', 'S$600–3,000+ / S$1,500–6,000+', 'Homejourney (2026)', 'https://www.homejourney.sg/blog/moving-service-price-singapore-2026-cost-guide-202602212002'],
+  ['Peak month-end surcharge', '+10–20%, or S$100–300', 'Homejourney (2026)', 'https://www.homejourney.sg/blog/moving-service-price-singapore-2026-cost-guide-202602212002']];
+function marketCheck() {
+  const c = DATA.competitors, k = senseCheck(), j = jobsYear(2025);
+  const price = A.priceHDB * (j.res + 0.55 * j.rent + j.bto + 1.22 * j.priv) / (j.res + j.rent + j.bto + j.priv);
+  const sizeU = k.upper * price, sizeL = k.lower * price, ours = A.shareTarget * k.upper * price;
+  return { c, price, sizeU, sizeL, ours, perFirm: sizeU / c.livePrimary };
+}
+function renderMarket() {
+  const m = marketCheck(), c = m.c, yrs = Object.keys(c.regs).map(Number);
+  const surv = y => { const r = c.regs[y]; return r[0] ? r[1] / r[0] : NaN; };
+  $('#mkKpis').innerHTML = `
+    <div class="kpi"><b>${fmt(c.live)}</b><span>live firms registered for moving services, ${fmt(c.livePrimary)} as their main activity</span></div>
+    <div class="kpi"><b>${pct(c.liveByKind.sole / c.live)}</b><span>are sole proprietors or partnerships; median ${c.officersMedian} officer per firm</span></div>
+    <div class="kpi"><b>S$${fmt(Math.round(m.sizeL / 1e6))}–${fmt(Math.round(m.sizeU / 1e6))}M</b><span>a year: the market, from estimated moves × S$${fmt(Math.round(m.price))} average price</span></div>
+    <div class="kpi"><b>~${fmt(Math.round(m.ours / m.perFirm))}×</b><span>an average firm: our ${pct(A.shareTarget, 1)} share is S$${(m.ours / 1e6).toFixed(1)}M a year, against S$${fmt(Math.round(m.perFirm / 1000))}k if the market were split evenly</span></div>`;
+  $('#mkTitle').textContent = `${fmt(c.live)} movers, most of them one-person firms`;
+  const data = { labels: yrs, datasets: [
+    { type: 'bar', label: 'Registered that year (moving as main activity)', data: yrs.map(y => c.regs[y][0]), backgroundColor: '#D9D2C5', borderRadius: 3, yAxisID: 'y', order: 2 },
+    { type: 'line', label: 'Share of that year\'s firms still live today', data: yrs.map(y => +(surv(y) * 100).toFixed(1)), borderColor: css('--c2'), backgroundColor: css('--c2'), borderWidth: 2.5, pointRadius: 0, tension: 0.25, yAxisID: 'y2', order: 1 }] };
+  if (C.entry) { C.entry.data = data; C.entry.update(); }
+  else C.entry = new Chart($('#cEntry'), { data, options: { interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: i => i.datasetIndex ? `${i.raw}% still live` : `${i.raw} registered` } } },
+    scales: { x: { grid: NOGRID, ticks: { maxTicksLimit: 10 } }, y: { grid: GRID, title: { display: true, text: 'Firms registered' } },
+      y2: { position: 'right', min: 0, max: 100, grid: NOGRID, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Still live in 2026' } } } } });
+  const avg = a => mean(yrs.filter(y => y >= a[0] && y <= a[1]).map(y => c.regs[y][0]));
+  $('#mkEntryNote').innerHTML = `About ${fmt(Math.round(avg([2022, 2025])))} new moving firms register every year (more during the 2020–21 home-delivery boom). Of those registered in 2021, ${pct(surv(2021))} are still live five years on; of 2016's, ${pct(surv(2016))} after ten years. Entry is cheap and failure is common, which is why our launch risk (floor 7) is real and why the plan keeps the option to stop. Live firms are a median ${c.liveAgeMedian} years old. Only ${fmt(c.liveMovingWords)} live firms describe themselves with "mover", "moving", "removal" or "relocation"; many others do deliveries or general lorry work under the same code.`;
+  // region: competitors (registered address) vs estimated moves, 2025
+  const R = ['Central', 'North-East', 'East', 'West', 'North'], ry = regionYear(2025);
+  const mv = R.map(r => { const d = ry[r] || { res: 0, rent: 0, bto: 0, priv: 0 }; return d.res + d.rent + d.bto + d.priv; }), mvT = sum(mv);
+  const fr = R.map(r => c.liveByRegion[r] || 0), frT = sum(fr);
+  const rdata = { labels: R, datasets: [
+    { label: 'Share of moving firms (registered address)', data: fr.map(v => +(v / frT * 100).toFixed(1)), backgroundColor: css('--c2'), borderRadius: 4 },
+    { label: 'Share of estimated moves, 2025', data: mv.map(v => +(v / mvT * 100).toFixed(1)), backgroundColor: css('--c1'), borderRadius: 4 }] };
+  if (C.compReg) { C.compReg.data = rdata; C.compReg.update(); }
+  else C.compReg = new Chart($('#cCompReg'), { type: 'bar', data: rdata, options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: i => `${i.dataset.label}: ${i.raw}%` } } },
+    scales: { x: { grid: NOGRID }, y: { grid: GRID, ticks: { callback: v => v + '%' } } } } });
+  const per = R.map((r, i) => ({ r, v: (mv[i] / mvT) / (fr[i] / frT) })).sort((a, b) => b.v - a.v);
+  $('#mkRegNote').innerHTML = `Moves per competitor are highest in the <b>${per[0].r}</b> and <b>${per[1].r}</b> (${per[0].v.toFixed(1)}× and ${per[1].v.toFixed(1)}× the national ratio) and lowest in the ${per[R.length - 1].r}, where firms cluster around industrial estates. A depot serving the less crowded regions faces less local competition (floor 9). Regions come from the first two digits of each firm's registered postal code: approximate, and a registered address is not always where the lorries park.`;
+  $('#priceTable tbody').innerHTML = PRICES.map(([w, p, src, url]) => `<tr><td>${w}</td><td>${p}</td><td><a href="${url}" target="_blank" rel="noopener">${src}</a></td></tr>`).join('');
+  $('#mkPriceNote').innerHTML = `Our average HDB move price of <b>S$${fmt(A.priceHDB)}</b> sits in the middle: above budget trip-based movers and app platforms, at or below established movers' quotes for a 4-room flat. A full-service mid-market mover is the position the model assumes. The published month-end surcharge (+10–20%) supports the peak premium tested on the rooftop.`;
+  const F = [
+    ['Rivalry', 'High', `${fmt(c.live)} live firms, mostly one-person; no firm is large enough to set prices. → Winning ${pct(A.shareTarget, 1)} means becoming one of the larger movers, so the share is uncertain: the simulation draws it between 50% and 130% of the target, and break-even share is tested on floor 10.`],
+    ['Threat of new entrants', 'High', `About ${fmt(Math.round(avg([2022, 2025])))} new firms a year; a lorry and a registration are enough. → Prices stay competitive: price drift and a recession price cut are in the simulation.`],
+    ['Substitutes', 'High', 'App platforms (GoGoX, Lalamove), freelancer marketplaces, DIY van rental. → Customers can trade down, which is why the price elasticity on the rooftop is above 1 and why a broker is assumed to win less share.'],
+    ['Buyer power', 'Medium–high', 'Households collect several quotes, and price guides are published. → Move price is the biggest driver in the tornado (floor 8): protect it with service, not discounts.'],
+    ['Supplier power', 'Medium', 'Crews depend on work-permit quotas and levies; trucks on COE prices. → Crew cost and truck price are sliders and tornado bars; crews are planned monthly to avoid paying idle labour.']];
+  $('#forcesTable tbody').innerHTML = F.map(([f, s, e]) => `<tr><td>${f}</td><td>${s}</td><td>${e}</td></tr>`).join('');
+}
+
+/* ==========================================================================
+   SENSE CHECK of the demand measure against outside figures.
+   upper   = estimated moves as counted everywhere (resale = 2 moves)
+   lower   = move-ins only: every relocation has exactly one destination, so
+             counting arrivals cannot double count a household that sells one
+             home and buys another (resale buyer 1, new tenancy, BTO owner,
+             private resale buyer, completed new private sale)
+   per household = moves / resident households (SingStat, 2025)
+   floor   = household growth in 2025: every new household is at least one move
+   benchmark: US, 11.8% of people moved in 2024, a record low (Census Bureau)
+   ========================================================================== */
+const SENSE = { households2025: 1487100, households2024: 1463400, usMovers2024: 0.118 };
+function senseCheck() {
+  const j = jobsYear(2025), privIn = sum(DATA.privateQ.filter(d => String(d[0]).startsWith('2025')).map(d => d[1] + d[2]));
+  const upper = j.res + j.rent + j.bto + j.priv, lower = j.res / 2 + j.rent + j.bto + privIn;
+  return { upper, lower, growth: SENSE.households2025 - SENSE.households2024, rU: upper / SENSE.households2025, rL: lower / SENSE.households2025 };
+}
+function renderSense() {
+  const k = senseCheck(), ourJobs = A.shareTarget * k.upper;
+  $('#senseBox').innerHTML = `<h3>Sense check: is ${fmt(Math.round(k.upper))} moves a year plausible?</h3>
+    <div class="kpis">
+      <div class="kpi"><b>${pct(k.rU, 1)}</b><span>of Singapore's ${fmt(SENSE.households2025)} resident households move a year on our count (once every ${(1 / k.rU).toFixed(0)} years)</span></div>
+      <div class="kpi"><b>${fmt(Math.round(k.lower / 100) * 100)}</b><span>moves counting arrivals only (${pct(k.rL, 1)} of households): the lower bound</span></div>
+      <div class="kpi"><b>11.8%</b><span>of Americans moved in 2024, a record low</span></div></div>
+    <p style="margin:10px 0 0;max-width:95ch">Both counts sit below the US rate, as they should: most Singapore households own an HDB flat they must keep for at least five years, and tenures are long. They are far above the floor set by household formation (${fmt(k.growth)} new households in 2025, each at least one move). <b>The gap between the two counts is double counting:</b> a household that sells one home and buys another is one relocation but two records ("seller out" and "buyer in"). Counting arrivals only removes that, so the true number of relocations lies between ${fmt(Math.round(k.lower / 1000))}k and ${fmt(Math.round(k.upper / 1000))}k. Our ${pct(A.shareTarget, 1)} market share is defined on the upper count: ${fmt(Math.round(ourJobs))} jobs a year, which would be a ${pct(ourJobs / k.lower, 1)} share of the lower count. Read the share slider with that in mind.</p>
+    <p class="note">Households: <a href="https://www.singstat.gov.sg/find-data/explore-data-themes/households/resident-households/latest-news-data" target="_blank" rel="noopener">SingStat, resident households 2024–2025</a>. US: <a href="https://www.globest.com/amp/2025/09/15/household-mobility-reaches-record-low-in-2024/" target="_blank" rel="noopener">Census Bureau data via GlobeSt (Sept 2025)</a>; a person-based rate, so only a ceiling for comparison. Singapore publishes no annual moving rate, so this is a plausibility check, not a validation.</p>`;
 }
 const STREAM_ON = { res: true, rent: true, bto: true, priv: true };
 // 'lines' = each type on its own line from zero (shows each type's own trend);
@@ -1665,7 +2096,7 @@ function drawStreams() {
 }
 
 /* ==========================================================================
-   12. FLOOR 2: clustering map, elbow, depots (animated replay)
+   12. FLOOR 9: clustering map, elbow, depots (animated replay)
    ========================================================================== */
 const CL_COLORS = ['--c1', '--c2', '--c3', '--c4', '--c5', '--teal'];
 let clTimer = null;
@@ -1823,7 +2254,7 @@ function openYearDialog(y) {
       <div class="kpi"><b>${mood >= 0 ? '+' : '−'}${pct(Math.abs(mood))}</b><span>vs normal for its era (market mood)</span></div>
       ${g != null ? `<div class="kpi"><b>${g > 0 ? '+' : ''}${g}%</b><span>real GDP growth${rec ? ' (recession)' : ''}</span></div>` : ''}
     </div>${story}
-    <p class="note" style="margin-top:10px">Rule changes: LKY School case study, URA/MND/HDB announcements (sources on floor 9). GDP: SingStat. Effects are estimated from 1991–2025 (floor 5).</p>`;
+    <p class="note" style="margin-top:10px">Rule changes: LKY School case study, URA/MND/HDB announcements (sources on floor 10). GDP: SingStat. Effects are estimated from 1991–2025 (floor 5).</p>`;
   const back = $('#yearModal'); back.hidden = false; $('#ymClose').focus({ preventScroll: true });
 }
 function closeYearDialog() { $('#yearModal').hidden = true; }
@@ -1889,13 +2320,23 @@ function renderOutlook(sc) {
 }
 
 /* ==========================================================================
-   15. FLOOR 5: newsvendor
+   15. FLOOR 6: newsvendor
    ========================================================================== */
 let nvYear = 2;
 function renderNewsvendor(results) {
   const nv = newsvendor(A), phased = results.phased;
-  $('#nvTitle').textContent = `Own enough crews to fully cover ${pct(nv.CR)} of months`;
-  $('#crBox').innerHTML = `
+  const nvCrew = newsvendor({ ...A, crewPlan: false });            // crew + truck together
+  const crCrew = nv.Cu / (nv.Cu + A.crewCost / A.jobsPerCrew);      // a crew-slot on its own
+  $('#nvTitle').textContent = A.crewPlan ? `Staff crews for about ${pct(crCrew)} of months; hold trucks for the busiest` : `Own enough crews to fully cover ${pct(nv.CR)} of months`;
+  $('#nvLede').textContent = A.crewPlan ? 'Newsvendor logic, split in two. A job beyond our capacity goes to a subcontractor at a premium (underage). An idle crew costs its wages, but an idle truck only its depreciation and running costs (overage). So crews are staffed up to the demand quantile where their costs balance, and trucks are held for the busiest planned month.' : 'Newsvendor logic on capacity. An idle crew costs us its wages and truck (overage). A job beyond capacity goes to a subcontractor at a premium (underage). Own capacity up to the demand quantile where the two balance.';
+  $('#nvNote').textContent = A.crewPlan ? 'Our monthly jobs across all simulated futures for that year. The line marks the crew critical-ratio quantile: the one-month rule of thumb. The monthly plan below refines it with the cost of hiring and releasing crews.' : 'Our monthly jobs across all simulated futures for that year. The line marks the critical-ratio quantile; capacity is set there.';
+  $('#crBox').innerHTML = A.crewPlan ? `
+    <table><tbody>
+      <tr><td>Underage cost Cu: subcontract a job (${pct(A.subFrac)} × S$${A.priceHDB} − S$${FIXED.varCost} own cost)</td><td class="num"><b>S$${fmt(nv.Cu)}</b></td></tr>
+      <tr><td>Overage, idle crew-slot (S$${fmt(A.crewCost)} crew ÷ ${A.jobsPerCrew} jobs) → critical ratio for crews</td><td class="num"><b>S$${fmt(A.crewCost / A.jobsPerCrew)} → ${crCrew.toFixed(2)}</b></td></tr>
+      <tr><td>Overage, idle truck-slot ((S$${fmt(A.truckCapex / FIXED.truckLife / 12)} truck + S$${fmt(FIXED.truckRun)} running) ÷ ${A.jobsPerCrew}) → ratio for trucks (ceiling)</td><td class="num"><b>S$${fmt(nv.Co)} → ${nv.CR.toFixed(2)}</b></td></tr>
+    </tbody></table>
+    <p class="note" style="margin:6px 0 0">With crews hired month by month, the two decisions separate: an idle truck is cheap, an idle crew is not. Before planning crews, one crew per truck gave a single ratio of ${nvCrew.CR.toFixed(2)}.</p>` : `
     <table><tbody>
       <tr><td>Underage cost Cu: subcontract a job (${pct(A.subFrac)} × S$${A.priceHDB} − S$${FIXED.varCost} own cost)</td><td class="num"><b>S$${fmt(nv.Cu)}</b></td></tr>
       <tr><td>Overage cost Co: one idle job-slot ((S$${fmt(A.crewCost)} crew + S$${fmt(A.truckCapex / FIXED.truckLife / 12)} truck + S$${fmt(FIXED.truckRun)} running) ÷ ${A.jobsPerCrew} jobs)</td><td class="num"><b>S$${fmt(nv.Co)}</b></td></tr>
@@ -1911,12 +2352,12 @@ function renderNewsvendor(results) {
   const vals = []; for (const d of phased.D) for (let t = nvYear * 12; t < nvYear * 12 + 12; t++) vals.push(d[t]);
   const lo = Math.floor(quantile(vals, 0.005) / 10) * 10, hi = Math.ceil(quantile(vals, 0.995) / 10) * 10, nb = 28, w = (hi - lo) / nb;
   const bins = new Array(nb).fill(0); vals.forEach(v => { const b = Math.min(nb - 1, Math.max(0, Math.floor((v - lo) / w))); bins[b]++; });
-  const qv = quantile(vals, nv.CR), crews = Math.ceil(qv / (A.jobsPerCrew * (1 - FIXED.downtime)));
+  const qv = quantile(vals, A.crewPlan ? crCrew : nv.CR), crews = Math.ceil(qv / (A.jobsPerCrew * (1 - FIXED.downtime)));
   const labels = bins.map((_, i) => Math.round(lo + (i + 0.5) * w));
   const qIdx = (qv - lo) / w - 0.5;
   const data = { labels, datasets: [{ data: bins.map(b => b / vals.length * 100), borderRadius: 3,
     backgroundColor: labels.map(l => l <= qv ? css('--c1') : alpha(css('--c1'), 0.35)) }] };
-  const opts = { plugins: { legend: { display: false }, marks: { lines: [{ at: qIdx, label: `${pct(nv.CR)} quantile = ${fmt(qv)} jobs → ${crews} crews`, align: qIdx > nb * 0.6 ? 'right' : 'left' }] },
+  const opts = { plugins: { legend: { display: false }, marks: { lines: [{ at: qIdx, label: `${pct(A.crewPlan ? crCrew : nv.CR)} quantile = ${fmt(qv)} jobs ${A.crewPlan ? '≈' : '→'} ${crews} crews`, align: qIdx > nb * 0.6 ? 'right' : 'left' }] },
       tooltip: { callbacks: { title: i => `≈ ${i[0].label} jobs in a month`, label: i => `${i.raw.toFixed(1)}% of months` } } },
     scales: { x: { grid: NOGRID, title: { display: true, text: `Our jobs per month, ${2027 + nvYear}` }, ticks: { maxTicksLimit: 8 } },
       y: { grid: GRID, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Share of months' } } } };
@@ -1925,16 +2366,64 @@ function renderNewsvendor(results) {
   // fleet by year for lease (= newsvendor each year) vs buy (year-3 size)
   const yrs = [2027, 2028, 2029, 2030, 2031], tY = r => yrs.map((_, k) => r.T[k * 12]);
   const fdata = { labels: yrs, datasets: [
-    { label: 'Newsvendor need (lease)', data: tY(results.lease), backgroundColor: css('--c3'), borderRadius: 4 },
+    { label: A.crewPlan ? 'Lease (resized yearly)' : 'Newsvendor need (lease)', data: tY(results.lease), backgroundColor: css('--c3'), borderRadius: 4 },
     { label: 'Phased buying (owned)', data: tY(results.phased), backgroundColor: css('--c1'), borderRadius: 4 },
     { label: 'Buy upfront', data: tY(results.buy), backgroundColor: css('--c2'), borderRadius: 4 }] };
+  renderCrewPlan(results);
   if (C.fleet) { C.fleet.data = fdata; C.fleet.update(); }
   else C.fleet = new Chart($('#cFleet'), { type: 'bar', data: fdata,
     options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: NOGRID }, y: { grid: GRID, title: { display: true, text: 'Trucks (1 crew each)' }, ticks: { precision: 0 } } } } });
 }
 
+// Floor 6, lower half: the monthly crew plan for the recommended plan against average demand and trucks held
+function renderCrewPlan(results) {
+  const r = results[REC], effCap = A.jobsPerCrew * (1 - FIXED.downtime), H = FIXED.H;
+  const labels = Array.from({ length: H }, (_, t) => `${MON3[t % 12]} ${2027 + Math.floor(t / 12)}`);
+  const dMean = Array.from({ length: H }, (_, t) => mean(r.D.map(d => d[t])));
+  const data = { labels, datasets: [
+    { type: 'bar', label: 'Average jobs a month', data: dMean, backgroundColor: '#E2DBCF', borderRadius: 2, order: 3 },
+    { type: 'line', label: 'Crew capacity (planned)', data: r.W.map(w => w * effCap), borderColor: css('--c1'), backgroundColor: css('--c1'), stepped: true, borderWidth: 2.5, pointRadius: 0, order: 1 },
+    { type: 'line', label: 'Truck capacity (held)', data: r.T.map(v => v * effCap), borderColor: '#9C9385', borderDash: [5, 4], stepped: true, borderWidth: 2, pointRadius: 0, order: 2 }] };
+  if (C.crew) { C.crew.data = data; C.crew.update(); }
+  else C.crew = new Chart($('#cCrew'), { data, options: { interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: i => i.datasetIndex === 0 ? `Average jobs: ${fmt(Math.round(i.raw))}` : `${i.dataset.label}: ${Math.round(i.raw / effCap)} (${fmt(Math.round(i.raw))} jobs)` } } },
+    scales: { x: { grid: NOGRID, ticks: { maxTicksLimit: 10 } }, y: { grid: GRID, beginAtZero: true, title: { display: true, text: 'Jobs a month' } } } } });
+  let hires = 0, rel = 0; for (let t = 0; t < H; t++) { const dW = r.W[t] - (t ? r.W[t - 1] : 0); if (dW > 0) hires += dW; else rel -= dW; }
+  const f = LAST.fixedCrew;
+  const first = r.W.findIndex(w => w > 0);
+  $('#crewTitle').textContent = A.crewPlan ? `Crews start at ${r.W[first]} in ${MON3[first % 12]} ${2027 + Math.floor(first / 12)} and grow to ${Math.max(...r.W)}` : 'Crews planned month by month (switched off)';
+  $('#crewKpis').innerHTML = A.crewPlan && f ? `
+    <div class="kpi"><b>${hires} / ${rel}</b><span>crews hired / released over five years</span></div>
+    <div class="kpi"><b>${moneyD(r.meanNPV - f.meanNPV)}</b><span>mean NPV vs one full-time crew per newsvendor truck (${money(f.meanNPV)})</span></div>
+    <div class="kpi"><b>${pct(r.pLoss)}</b><span>chance of loss (was ${pct(f.pLoss)})</span></div>` : '<p class="note">Switch crew planning on under Adjust assumptions to compare.</p>';
+  // unit economics of one job in 2029 (the plan's first settled year): price from the market mix, costs from the assumptions
+  let wr = 0, wt = 0; for (const s of LAST.sc) for (let t = 24; t < 36; t++) { const tot = s.res[t] + s.rent[t] + s.bto[t] + s.priv[t];
+    wr += s.res[t] + 0.55 * s.rent[t] + s.bto[t] + 1.22 * s.priv[t]; wt += tot; }
+  const price = A.priceHDB * wr / wt, slots = A.jobsPerCrew * (1 - FIXED.downtime) * (isNaN(r.util) ? 1 : r.util);
+  const uc = [['Average price (market mix of HDB, rental and private moves)', price], ['Packing materials and fuel', -FIXED.varCost], [`Marketing (${pct(FIXED.marketing)} of price)`, -FIXED.marketing * price],
+    [`Crew time (S$${fmt(A.crewCost)} a month ÷ ${fmt(slots, 1)} jobs at ${pct(r.util)} utilisation)`, -A.crewCost / slots],
+    [`Truck (S$${fmt(A.truckCapex / FIXED.truckLife / 12 + FIXED.truckRun)} a month ÷ ${fmt(slots, 1)} jobs)`, -(A.truckCapex / FIXED.truckLife / 12 + FIXED.truckRun) / slots]];
+  const margin = sum(uc.map(x => x[1])), subMargin = price * (1 - A.subFrac - FIXED.marketing);
+  $('#unitTable tbody').innerHTML = uc.map(([l, v]) => `<tr><td>${l}</td><td class="num">${v < 0 ? '−' : ''}S$${fmt(Math.abs(Math.round(v)))}</td></tr>`).join('') +
+    `<tr><td><b>Left per job we do ourselves</b></td><td class="num"><b>S$${fmt(Math.round(margin))}</b></td></tr><tr><td>Left per job passed to a subcontractor (${pct(1 - A.subFrac)} of price, less marketing)</td><td class="num">S$${fmt(Math.round(subMargin))}</td></tr>`;
+  $('#unitNote').textContent = `Covering S$${fmt(FIXED.overhead * 12)} a year of overhead takes about ${fmt(Math.round(FIXED.overhead * 12 / margin / 100) * 100)} jobs a year done ourselves (before tax). The gap between S$${fmt(Math.round(margin))} and S$${fmt(Math.round(subMargin))} is why owning capacity pays once volume is steady, and the S$${fmt(Math.round(A.crewCost / slots))} of crew time against S$${fmt(Math.round((A.truckCapex / FIXED.truckLife / 12 + FIXED.truckRun) / slots))} of truck is why crews, not trucks, are planned month by month.`;
+  $('#crewNote').innerHTML = A.crewPlan ? `${recName()}: no crews or trucks while we act as a broker in 2027. Bars: average monthly jobs across the futures; green: crews staffed (× ${fmt(effCap, 1)} jobs each); grey: trucks held. From 2028 the plan ramps crews with market share; once the share settles, the seasons are too mild (±10%) for hiring and releasing at S$3,000 each to pay, so the crew level stays flat and the peaks go to subcontractors.` : 'Crew planning is off: one full-time crew per truck, as in the newsvendor rule above.';
+}
+// Make or buy: the broker with leaner assumptions, on the same futures (cheap: no fleet, no crew plan)
+const BROKER_TESTS = [['Asset-light broker, as above (S$18,000/month, 30% less share)', {}],
+  ['Lean broker (S$8,000/month overhead)', { brokerOverhead: 8000 }],
+  ['Lean broker, no share penalty', { brokerOverhead: 8000, brokerShareMul: 1 }]];
+function renderBrokerTest(sc) {
+  const rows = BROKER_TESTS.map(([name, x]) => { const r = runStrategy('broker', sc, { ...A, ...x }); return { name, r }; });
+  const h = LAST.results[REC], phz = LAST.results.phased;
+  rows.push({ name: `${recName()} (recommended)`, r: h }, { name: 'Phased buying from day one', r: phz });
+  LAST.brokerTest = rows;
+  $('#brokerTable tbody').innerHTML = rows.map(({ name, r }) => `<tr><td>${name}</td><td class="num">${money(r.meanNPV)}</td><td class="num">${pct(r.pLoss)}</td><td class="num">${money(r.cvar5)}</td></tr>`).join('');
+  const lean = rows[1].r, leanNP = rows[2].r;
+  $('#brokerNote').innerHTML = `Run lean, outsourcing everything is the <b>low-risk, low-return</b> option: ${money(lean.meanNPV)} with ${aPct(lean.pLoss)} chance of loss, and ${money(leanNP.meanNPV)} if a broker wins as much share as a fleet owner. Owning trucks earns more on average (${money(h.meanNPV)}) but can lose up to ${money(-h.cvar5)} in the worst futures. The recommended plan uses both: a broker while demand is uncertain, then its own fleet, where the 20% margin on every job is kept instead of paid to subcontractors. How lean a broker can be, and whether it loses share, are assumptions no data here can settle.`;
+}
 /* ==========================================================================
-   16. FLOOR 6: risk comparison
+   16. FLOOR 7: risk comparison
    ========================================================================== */
 function renderRisk(results) {
   const list = STRATS.map(s => ({ ...s, r: results[s.id] }));
@@ -1963,11 +2452,13 @@ function renderRisk(results) {
   // best risk-adjusted strategy: highest mean NPV among those with CVaR within 25% of the best CVaR of owning strategies
   const best = [...list].sort((a, b) => b.r.meanNPV - a.r.meanNPV)[0];
   $('#riskTitle').textContent = `${best.name} gives the best expected return`;
+  $('#riskCi').textContent = `Each mean NPV is itself an estimate: with 2,000 futures it is accurate to about ±${money(ci95(results[REC].npv))} (95%) for ${recName().toLowerCase()}${isBase() ? `, and other random seeds give ${SEED_RANGE} (notebook §9b)` : ''}. The ranking of the strategies holds under every seed tested.`;
   const why = {
-    buy: 'Biggest fleet from day one. Trucks sit idle while market share ramps up, so most of the early cash burn is depreciation and wages.',
+    buy: 'Whole fleet bought on day one: capital sits in trucks that wait for market share to ramp up, and is spent before we know how the launch goes.',
     lease: 'No capital tied up and the fleet shrinks if the launch is weak. Lease payments cost more per truck than owning.',
     phased: 'Buy only what this year needs; each new truck is a decision taken with a year more data. Owned trucks keep resale value.',
-    broker: 'Almost no fixed cost, so losses are capped, but subcontractors take most of the margin and peak months go unserved.'
+    broker: 'Almost no fixed cost, so losses are capped, but subcontractors take most of the margin and peak months go unserved.',
+    hybrid: 'Subcontract every job in 2027 while we learn how many customers we win, then buy trucks in phases. No capital is at risk until demand is proven, and the first year\'s results decide whether to buy at all.'
   };
   $('#strategyCards').innerHTML = list.map(s => `<div class="panel"><h3><span class="swatch" style="background:${css(s.color)}"></span>${s.name}</h3>
     <p>${why[s.id]}</p><div class="kpis">
@@ -1977,9 +2468,9 @@ function renderRisk(results) {
 }
 
 /* ==========================================================================
-   17. FLOOR 7: ROI + tornado sensitivity
+   17. FLOOR 8: ROI + tornado sensitivity
    ========================================================================== */
-let roiId = 'phased';
+let roiId = REC;
 function renderROI(results) {
   const chips = $('#roiChips');
   if (!chips.children.length) STRATS.forEach(s => {
@@ -2001,12 +2492,13 @@ function renderROI(results) {
       scales: { x: { grid: NOGRID, ticks: { maxTicksLimit: 6 } }, y: { grid: GRID, ticks: { callback: v => money(v) }, title: { display: true, text: 'Cumulative cash (S$)' } } } } });
   $('#roiTitle').textContent = `${s.name}: ${r.meanNPV >= 0 ? 'positive' : 'negative'} expected NPV of ${money(r.meanNPV)}`;
   $('#roiKpis').innerHTML = `
-    <div class="kpi"><b>${money(r.meanNPV)}</b><span>mean NPV, 2027–2031</span></div>
+    <div class="kpi"><b>${money(r.meanNPV)}</b><span>mean NPV, 2027–2031 (±${money(ci95(r.npv))}, 95%)</span></div>
     <div class="kpi"><b>${isNaN(r.irr) ? 'n/a' : pct(r.irr, 0)}</b><span>IRR on the average cash flows</span></div>
     <div class="kpi"><b>${isNaN(r.paybackMedian) ? 'not within 5 yrs' : Math.round(r.paybackMedian) + ' months'}</b><span>median payback (${pct(r.pPayback)} of futures pay back)</span></div>
     <div class="kpi"><b>${money(r.capex)}</b><span>trucks bought</span></div>
     <div class="kpi"><b>${money(r.cashNeed)}</b><span>cash buffer to raise</span></div>
-    <div class="kpi"><b>${money(r.revPerYear)}</b><span>average revenue a year</span></div>`;
+    <div class="kpi"><b>${money(r.revPerYear)}</b><span>average revenue a year</span></div>
+    <div class="kpi"><b>${A.taxOn ? money(r.taxPerYear) : 'off'}</b><span>corporate tax a year${A.taxOn ? ` (NPV before tax ${money(r.meanNPVPre)})` : ''}</span></div>`;
 }
 // Tornado: each assumption 20% worse / better, everything else at base (400 futures, same seed)
 function renderTornado() {
@@ -2093,7 +2585,7 @@ function wireShockControls(onChange) {
 function renderScenarioTable() {
   const n = 600, strat = STRATS.find(s => s.id === roiId);
   // the fleet plan is made once, from the "history repeats" forecast; every scenario then hits that same plan
-  const aPlan = { ...A, recMode: 'random', polMode: 'random' }, plan = Int32Array.from(runStrategy(roiId, genScenarios(aPlan, n), aPlan).T);
+  const aPlan = { ...A, recMode: 'random', polMode: 'random' }, plan = planOf(runStrategy(roiId, genScenarios(aPlan, n), aPlan));
   const rows = SCEN.map(sc0 => { const a = { ...A, recYear: 2028, polYear: 2028, ...sc0 }; delete a.name;
     const sc = genScenarios(a, n), r = runStrategy(roiId, sc, a, plan);
     const res31 = median(sc.map(s => { let v = 0; for (let t = 48; t < 60; t++) v += s.res[t] / 2; return v; }));
@@ -2103,24 +2595,139 @@ function renderScenarioTable() {
   $('#scenHead').textContent = `Stress test: ${strat.name.toLowerCase()} under six shock scenarios`;
   $('#scenTable tbody').innerHTML = rows.map(r => `<tr class="${r.cur ? 'current' : ''}"><td>${r.name}${r.cur ? ' <small>(selected)</small>' : ''}</td><td class="num">${fmt(Math.round(r.res31 / 100) * 100)}</td><td class="num">${money(r.npv)}</td><td class="num">${pct(r.pLoss)}</td><td class="num">${money(r.cvar)}</td></tr>`).join('');
   const calm = rows[0], rec = rows[2], tight = rows[3];
-  $('#scenNote').innerHTML = `600 identical futures per row and one fleet plan, made in advance from the "history repeats" forecast, so the gaps come from the shocks alone: the shock arrives unannounced and overflow goes to subcontractors. A 2028 recession changes mean NPV by ${moneyD(rec.npv - calm.npv)} versus calm: more resales, but ${pct(A.recPriceHit)} lower prices that year. One tightening in 2028 changes it by ${moneyD(tight.npv - calm.npv)}. Rule changes hurt more than recessions because they last: the market takes years to recover. Pick another strategy on the Return floor to re-run this table.`;
+  $('#scenNote').innerHTML = `600 identical futures per row and one fleet plan, made in advance from the "history repeats" forecast, so the gaps come from the shocks alone (600 futures keep it fast, so "history repeats" differs from the 2,000-future headline only by simulation noise; compare rows with each other): the shock arrives unannounced and overflow goes to subcontractors. A 2028 recession changes mean NPV by ${moneyD(rec.npv - calm.npv)} versus calm: more resales, but ${pct(A.recPriceHit)} lower prices that year. One tightening in 2028 changes it by ${moneyD(tight.npv - calm.npv)}. Rule changes hurt more than recessions because they last: the market takes years to recover. Pick another strategy on the Return floor to re-run this table.`;
 }
 
 /* ==========================================================================
-   18. FLOOR 9: recommendation (written from the numbers, so it stays true
+   17c. ROOFTOP: peak pricing (model in section 7b)
+   computePricing() runs the recommended plan (REC) with the rate card on the same
+   futures as its one-price run (LAST.results[REC]), plus premium-only / discount-only
+   splits, a 600-future sensitivity grid over elasticity x date flexibility, and
+   the break-even elasticity (bisection) above which the rate card loses money.
+   ========================================================================== */
+let prYear = 1;                                   // 2028: the year the fleet differs at base
+const MON3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function computePricing() {
+  const sc = LAST.sc, pr = pricingOf(A), forced = A.recMode !== 'random' || A.polMode !== 'random';
+  const aPlan = { ...A, recMode: 'random', polMode: 'random' };
+  // with a forced shock, the priced fleet is also planned in advance from the normal forecast (as in recompute)
+  const run = p => runStrategy(REC, sc, A, forced ? planOf(runStrategy(REC, LAST.scPlan, aPlan, null, p)) : null, p);
+  const priced = run(pr), premOnly = run({ ...pr, offDown: 0 }), discOnly = run({ ...pr, peakUp: 0 });
+  const sc6 = genScenarios(A, 600), base6 = mean(runStrategy(REC, sc6, A).npv);
+  const gain6 = p => mean(runStrategy(REC, sc6, A, null, p).npv) - base6;
+  const ELS = [0.3, 0.6, 1.2, 2.0], FLX = [0, 0.1, 0.2, 0.3];
+  const grid = ELS.map(e => FLX.map(f => gain6({ ...pr, elast: e, flex: f })));
+  // break-even elasticity for the current rate card and flexibility (gain falls as elasticity rises)
+  let lo = 0, hi = 4, be = NaN; const g0 = gain6({ ...pr, elast: lo }), g1 = gain6({ ...pr, elast: hi });
+  if (g0 > 0 && g1 < 0) { for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; gain6({ ...pr, elast: mid }) > 0 ? lo = mid : hi = mid; } be = (lo + hi) / 2; }
+  else if (g1 >= 0) be = Infinity;
+  LAST.pricing = { flat: LAST.results[REC], priced, premOnly, discOnly, grid, ELS, FLX, base6, be, g0 };
+  return LAST.pricing;
+}
+function renderPricing() {
+  const P = LAST.pricing, f = P.flat, r = P.priced, tier = priceTiers();
+  const months = t => MON3.filter((_, i) => tier[i] === t).join(', ');
+  const gain = r.meanNPV - f.meanNPV;
+  $('#prTitle').textContent = gain >= 0 ? `A peak rate card adds ${money(gain)} to the plan` : `This rate card costs the plan ${money(-gain)}`;
+  $('#prHead').textContent = `${recName()}: one price vs the rate card`;
+  // sliders show the current assumptions
+  [['peakUp', v => '+' + pct(v)], ['offDown', v => '−' + pct(v)], ['flex', v => pct(v)], ['elast', v => v.toFixed(1)]].forEach(([k, fm]) => { $('#i_' + k).value = A[k]; $('#o_' + k).textContent = fm(A[k]); });
+  $('#prCard').innerHTML = `<div class="rate-card">
+    <div class="pk"><span>Peak · ${months(1)}</span><b>S$${fmt(A.priceHDB * (1 + A.peakUp))}</b><span>+${pct(A.peakUp)}</span></div>
+    <div><span>Normal · other 6 months</span><b>S$${fmt(A.priceHDB)}</b><span>list price</span></div>
+    <div class="op"><span>Off-peak · ${months(-1)}</span><b>S$${fmt(A.priceHDB * (1 - A.offDown))}</b><span>−${pct(A.offDown)}</span></div></div>
+    <p class="note" style="margin:8px 0 0">Prices for an average HDB move. Peak and off-peak are the three busiest and quietest months of the seasonal index (chart below). Rental and private moves scale the same way.</p>`;
+  // seasonal index (HDB resales by calendar month, 1 = average month), coloured by tier
+  const sdata = { labels: MON3, datasets: [{ data: MODEL.S.map(v => v * 100), borderRadius: 4,
+    backgroundColor: MON3.map((_, i) => tier[i] > 0 ? css('--c2') : tier[i] < 0 ? css('--c3') : '#C9C1B3') }] };
+  if (C.season) { C.season.data = sdata; C.season.update(); }
+  else C.season = new Chart($('#cSeason'), { type: 'bar', data: sdata, options: { plugins: { legend: { display: false },
+      marks: { lines: [] }, tooltip: { callbacks: { label: i => `${i.raw.toFixed(0)}% of an average month` } } },
+    scales: { x: { grid: NOGRID }, y: { grid: GRID, min: 70, title: { display: true, text: '% of average month' } } } } });
+  const yrs = [2027, 2028, 2029, 2030, 2031], tY = x => yrs.map((_, k) => x.T[k * 12]);
+  const row = (label, a, b, fm, better) => { const d = b - a, good = better === 0 ? null : (d * better > 0);
+    return `<tr><td>${label}</td><td class="num">${fm(a)}</td><td class="num">${fm(b)}</td><td class="num" style="color:${good == null || Math.abs(d) < 1e-9 ? 'inherit' : good ? 'var(--c1)' : 'var(--c2)'}">${fm === pct ? (d >= 0 ? '+' : '−') + (Math.abs(d) * 100).toFixed(1) + ' pts' : fm === money ? moneyD(d) : (d >= 0 ? '+' : '') + d}</td></tr>`; };
+  $('#prTable tbody').innerHTML =
+    `<tr><td>Trucks by year</td><td class="num" style="white-space:nowrap">${tY(f).join('·')}</td><td class="num" style="white-space:nowrap">${tY(r).join('·')}</td><td class="num">${(() => { const dd = yrs.map((y, j) => [y, tY(r)[j] - tY(f)[j]]).filter(x => x[1]);
+      return dd.length ? dd.map(([y, v]) => `${v > 0 ? '+' : '−'}${Math.abs(v)} in ${y}`).join(', ') : 'same'; })()}</td></tr>` +
+    row('Mean NPV', f.meanNPV, r.meanNPV, money, 1) + row('Chance of loss', f.pLoss, r.pLoss, pct, -1) + row('Worst 5% avg', f.cvar5, r.cvar5, money, 1) +
+    row('Crew utilisation', f.util, r.util, pct, 1) + row('Average revenue a year', f.revPerYear, r.revPerYear, money, 1) +
+    `<tr><td colspan="4" style="padding-top:12px"><b>Where the money comes from:</b> premium alone ${moneyD(P.premOnly.meanNPV - f.meanNPV)}, discount alone ${moneyD(P.discOnly.meanNPV - f.meanNPV)}, both ${moneyD(gain)}.</td></tr>`;
+  // chart: average jobs per calendar month in the chosen year, one price vs rate card, with owned capacity
+  const chips = $('#prYearChips');
+  if (!chips.children.length) yrs.forEach((y, k) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = y; b.setAttribute('aria-pressed', k === prYear);
+    b.onclick = () => { prYear = k; [...chips.children].forEach((c, j) => c.setAttribute('aria-pressed', j === k)); ChangeFX.wrap($('#fP'), renderPricing); }; chips.appendChild(b); });
+  const k = prYear, avgM = x => MON3.map((_, m) => mean(x.D.map(d => d[k * 12 + m])));
+  const effCap = A.jobsPerCrew * (1 - FIXED.downtime), capF = f.T[k * 12] * effCap, capR = r.T[k * 12] * effCap;
+  const labels = MON3.map((m, i) => m + (tier[i] > 0 ? ' ▲' : tier[i] < 0 ? ' ▼' : ''));
+  const data = { labels, datasets: [
+    { type: 'bar', label: 'One price', data: avgM(f), backgroundColor: '#D9D2C5', borderRadius: 4, order: 3 },
+    { type: 'bar', label: 'Rate card', data: avgM(r), backgroundColor: MON3.map((_, i) => tier[i] > 0 ? css('--c2') : tier[i] < 0 ? css('--c3') : css('--c1')), borderRadius: 4, order: 2 },
+    { type: 'line', label: `Owned capacity, one price (${f.T[k * 12]} trucks)`, data: MON3.map(() => capF), borderColor: '#9C9385', borderDash: [5, 4], borderWidth: 2, pointRadius: 0, order: 1 },
+    { type: 'line', label: `Owned capacity, rate card (${r.T[k * 12]} trucks)`, data: MON3.map(() => capR), borderColor: css('--ink'), borderWidth: 2, pointRadius: 0, order: 0 }] };
+  if (C.price) { C.price.data = data; C.price.update(); }
+  else C.price = new Chart($('#cPrice'), { data, options: { interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { callbacks: { label: i => `${i.dataset.label}: ${fmt(Math.round(i.raw))} jobs` } } },
+    scales: { x: { grid: NOGRID }, y: { grid: GRID, beginAtZero: true, title: { display: true, text: 'Our jobs per month (average of futures)' } } } } });
+  $('#prNote').innerHTML = `${yrs[k]}. ▲ peak months (premium), ▼ off-peak (discount). Bars are the average month across the futures; lines are the capacity of the trucks held. The fleet covers the newsvendor quantile of months, so jobs above the line go to subcontractors. Owned trucks never shrink under phased buying, so in later years both fleets can end up the same size.`;
+  // sensitivity grid
+  const curE = P.ELS.reduce((a, b) => Math.abs(b - A.elast) < Math.abs(a - A.elast) ? b : a), curF = P.FLX.reduce((a, b) => Math.abs(b - A.flex) < Math.abs(a - A.flex) ? b : a);
+  $('#prGrid').innerHTML = `<thead><tr><th>Elasticity ↓ · can move date →</th>${P.FLX.map(x => `<th class="num">${pct(x)}</th>`).join('')}</tr></thead><tbody>` +
+    P.grid.map((rw, i) => `<tr><td>${P.ELS[i].toFixed(1)} <small>(10% dearer → ${pct(1 - Math.pow(1.1, -P.ELS[i]))} fewer jobs)</small></td>${rw.map((v, j) =>
+      `<td class="num ${v >= 0 ? 'pos' : 'neg'} ${P.ELS[i] === curE && P.FLX[j] === curF ? 'cur' : ''}">${moneyD(v)}</td>`).join('')}</tr>`).join('') + '</tbody>';
+  const beTxt = !isFinite(P.be) ? (P.be === Infinity ? 'pays at every elasticity tested (up to 4)' : 'loses money even if customers ignore price') :
+    `pays as long as elasticity stays below <b>${P.be.toFixed(1)}</b> (a 10% higher price losing under ${pct(1 - Math.pow(1.1, -P.be))} of jobs)`;
+  $('#prGridNote').innerHTML = `Change in the plan's (${recName().toLowerCase()}) mean NPV from your rate card, 600 futures per cell (outlined: closest to your sliders). This rate card ${beTxt}. The premium earns the money; a discount mainly gives margin away unless it fills crews that would sit idle. The grid is not perfectly smooth: a small change in demand can tip a whole crew or truck in or out of the plan.`;
+}
+function wirePricing() {
+  let tmr = null;
+  [['peakUp', v => '+' + pct(v)], ['offDown', v => '−' + pct(v)], ['flex', v => pct(v)], ['elast', v => v.toFixed(1)]].forEach(([k, fm]) => {
+    const inp = $('#i_' + k);
+    inp.addEventListener('input', () => { A[k] = +inp.value; $('#o_' + k).textContent = fm(A[k]); clearTimeout(tmr); $('#busy').classList.add('show');
+      tmr = setTimeout(() => { computePricing(); ChangeFX.wrap(document.querySelector('main'), () => { renderPricing(); renderRecommendation(LAST.results); }); $('#busy').classList.remove('show'); }, 250); });
+  });
+}
+
+function renderGate() {
+  const g = LAST.gate, ph = LAST.results[REC], st = g.stop;
+  const seedTxt = isBase() ? `; other random seeds give ${SEED_RANGE}, notebook §9b` : '';
+  $('#gateBox').innerHTML = `<h3>Go or no-go? <span style="color:${g.verdict === 'No-go' ? 'var(--c2)' : 'var(--c1)'}">${g.verdict}</span></h3>
+    <p style="margin:6px 0 12px;max-width:95ch">${recName()} earns a mean NPV of <b>${money(ph.meanNPV)}</b> (±${money(g.ci)}, 95% interval from 2,000 futures${seedTxt}) and an IRR of ${isNaN(ph.irr) ? 'n/a' : pct(ph.irr)} against a ${pct(A.disc)} hurdle, but needs a <b>${money(ph.cashNeed)}</b> buffer and loses money in ${pct(ph.pLoss)} of futures: about S$${(ph.meanNPV / ph.cashNeed * 100).toFixed(0)} of expected value per S$100 put at risk. ${g.verdict === 'No-go' ? 'At these assumptions the launch destroys value: do not start.' : 'That is worth doing because the plan lets us stop before buying trucks, so the go comes with a gate:'}</p>
+    <div class="kpis gate-kpis">
+      <div class="kpi"><b>${isNaN(g.be) ? 'n/a' : pct(g.be, 1)}</b><span>break-even market share (we assume ${pct(A.shareTarget, 1)})</span></div>
+      <div class="kpi"><b>${isNaN(g.pReach) ? 'n/a' : pct(g.pReach)}</b><span>chance the share we win reaches break-even</span></div>
+      <div class="kpi"><b>${isNaN(g.be) ? 'n/a' : fmt(Math.round(g.gateJobs))}</b><span>jobs a month as a broker by Dec 2027 (${isNaN(g.be) ? '' : pct(g.gateShare, 2) + ' share'}): below this, do not buy trucks</span></div>
+    </div>
+    ${st ? `<h3 style="margin-top:16px">What stopping at the gate is worth</h3>
+    <div class="kpis gate-kpis">
+      <div class="kpi"><b>${pct(st.pStop)}</b><span>of futures fall below the gate in Dec 2027 and stop</span></div>
+      <div class="kpi"><b>${money(st.ifStop)}</b><span>their average NPV when they stop, against ${money(st.ifCont)} if they carried on</span></div>
+      <div class="kpi"><b>${moneyD(st.meanNPV - ph.meanNPV)}</b><span>value of the option to stop: mean NPV ${money(ph.meanNPV)} → ${money(st.meanNPV)}, chance of loss ${pct(ph.pLoss)} → ${pct(st.pLoss)}</span></div>
+    </div>` : ''}
+    <p class="note" style="margin-top:10px">${st ? `Stopping turns large losses into small ones (${money(st.ifCont)} → ${money(st.ifStop)} on average in the futures that stop), which is why the mean rises; but every stopped future books its year-1 loss, including a few that would have recovered, so the chance of a loss rises slightly. ` : ''}Break-even share: the target share at which the plan's mean NPV is zero (600 futures, other assumptions as set). The gate is where the break-even launch should be after 12 months on the ${A.rampMonths}-month ramp, in jobs using the simulated market of about ${fmt(Math.round(g.mkt11 / 100) * 100)} moves in Dec 2027 and the broker's 30% smaller share. Until the gate the business owns no trucks and employs no crews, so stopping costs only the broker year's losses; the trucks are bought only once the launch has passed it. The stopping test treats each future separately: it looks at that future's own December 2027 jobs, as the company would.</p>`;
+  $('#heroAnswer').innerHTML = `<b class="v">Answer: ${g.verdict.toLowerCase()}.</b> ${g.verdict === 'No-go' ? `Do not launch at these assumptions: even the recommended plan (${recName().toLowerCase()}) has` : 'Subcontract every job in 2027, then buy trucks in phases:'} mean NPV <b>${money(ph.meanNPV)}</b> over 2027–2031 (IRR ${isNaN(ph.irr) ? 'n/a' : pct(ph.irr)}), ${pct(ph.pLoss)} chance of loss, ${money(ph.cashNeed)} cash buffer. ${isNaN(g.be) ? '' : g.verdict === 'No-go' ? `It needs at least ${pct(g.be, 1)} market share to break even (you have set ${pct(A.shareTarget, 1)}).` : `It breaks even at ${pct(g.be, 1)} market share; if we are placing fewer than ${fmt(Math.round(g.gateJobs))} jobs a month by December 2027, do not buy trucks.`} The full case is on floor 10.`;
+  if ($('#limCi')) $('#limCi').textContent = '±' + money(g.ci);
+  if ($('#limSeed')) $('#limSeed').textContent = SEED_RANGE;
+}
+
+/* ==========================================================================
+   18. FLOOR 10: recommendation (written from the numbers, so it stays true
        when assumptions change)
    ========================================================================== */
 function renderRecommendation(results) {
   const list = STRATS.map(s => ({ ...s, r: results[s.id] })).sort((a, b) => b.r.meanNPV - a.r.meanNPV);
-  const best = list[0], buy = results.buy, ph = results.phased;
+  const best = list[0], buy = results.buy, ph = results[REC], phz = results.phased;
   $('#recBox').innerHTML = `
     <h3 style="font-size:24px">${best.name}${best.r.meanNPV > 0 ? '' : ' (still loss-making: rethink the plan)'}</h3>
     <ol style="padding-left:20px;margin:10px 0 0">
       <li><b>Demand is predictable.</b> Flats reaching MOP rise from ${fmt(MODEL.U[2021])} (2026) to ${fmt(MODEL.U[2023])} (2028), and five years ahead our forecast missed by ${pct(mean(MODEL.rolling.model[4]))} on average, against ${pct(mean(MODEL.rolling.naive[4]))} for simply repeating the last year.</li>
-      <li><b>Size the fleet with the newsvendor rule.</b> Own capacity for the ${pct(newsvendor(A).CR)} quantile of monthly demand; subcontract the peaks.</li>
-      <li><b>Do not buy the whole fleet upfront.</b> It has a ${pct(buy.pLoss)} chance of losing money, against ${pct(ph.pLoss)} for phased buying.</li>
+      ${A.crewPlan ? `<li><b>Plan crews month by month, buy trucks to match.</b> ${(() => { const f = ph.W.findIndex(w => w > 0); return `Crews start at ${ph.W[f]} in ${MON3[f % 12]} ${2027 + Math.floor(f / 12)} and grow to ${Math.max(...ph.W)} as the share ramps up, and trucks follow the busiest planned month (${ph.T[f]} → ${ph.T[59]})`; })()}; peaks go to subcontractors. Against one full-time crew per newsvendor truck this adds ${LAST.fixedCrew ? money(ph.meanNPV - LAST.fixedCrew.meanNPV) : '—'} (floor 6).</li>` : `<li><b>Size the fleet with the newsvendor rule.</b> Own capacity for the ${pct(newsvendor(A).CR)} quantile of monthly demand; subcontract the peaks.</li>`}
+      <li><b>Subcontract the first year, then buy trucks in phases.</b> ${recName()} gives ${money(ph.meanNPV)} mean NPV with ${aPct(ph.pLoss)} chance of loss, against ${money(phz.meanNPV)} and ${pct(phz.pLoss)} for buying in phases from day one, and ${money(buy.meanNPV)} and ${pct(buy.pLoss)} for buying the whole fleet upfront. Outsourcing while demand is uncertain and insourcing once it is proven beats committing capital on day one (floor 7).</li>
       <li><b>Raise a cash buffer of about ${money(best.r.cashNeed)}</b> to survive the worst 5% of launches.</li>
       ${LAST.scen ? `<li><b>Stress-tested against shocks.</b> Against a calm five years, a surprise 2028 recession changes mean NPV by ${moneyD(LAST.scen[2].npv - LAST.scen[0].npv)} and a 2028 rule tightening by ${moneyD(LAST.scen[3].npv - LAST.scen[0].npv)}; with random shocks as often as since 1990, the chance of loss is ${pct(LAST.scen[1].pLoss)} (floor 5).</li>` : ''}
+      ${LAST.pricing ? (() => { const P = LAST.pricing, g = P.priced.meanNPV - P.flat.meanNPV; return g > 0
+        ? `<li><b>Add a peak rate card.</b> +${pct(A.peakUp)} in the busiest months and −${pct(A.offDown)} in the quietest adds about ${money(g)} to the plan's mean NPV and moves the chance of loss from ${pct(P.flat.pLoss)} to ${pct(P.priced.pLoss)} (rooftop)${P.premOnly.meanNPV - P.flat.meanNPV > g ? `; the premium alone adds ${money(P.premOnly.meanNPV - P.flat.meanNPV)}, so start with the premium and skip the discount` : ''}. It rests on assumed customer response: ${isFinite(P.be) ? `it stops paying if a 10% price rise loses more than ${pct(1 - Math.pow(1.1, -P.be))} of jobs` : 'it pays across the range tested'}.</li>`
+        : `<li><b>Keep one price for now.</b> With these assumptions the rate card changes mean NPV by ${moneyD(g)} (rooftop); test the premium on a few peak weeks before rolling it out.</li>`; })() : ''}
       <li><b>Protect ${(LAST.topDriver || 'price').toLowerCase()} first.</b> It moves the NPV most, followed by ${(LAST.topDriver2 || 'jobs per crew').toLowerCase()} (see the tornado chart on floor 8).</li>
     </ol>`;
   $('#assumTable tbody').innerHTML = SLIDERS.map(([k, label, , , , f]) => `<tr><td>${label}</td><td class="num">${f(A[k])}</td></tr>`).join('') +
@@ -2129,6 +2736,11 @@ function renderRecommendation(results) {
      <tr><td>Subcontractors can absorb</td><td class="num">${pct(FIXED.subCap)} of demand</td></tr>
      <tr><td>Recessions (floor 5)</td><td class="num">${{ random: 'Random, ~1 in 9 years', none: 'None', stress: 'Forced in ' + A.recYear }[A.recMode]}</td></tr>
      <tr><td>Price cut in a recession year</td><td class="num">${pct(A.recPriceHit)}</td></tr>
+     <tr><td>Corporate tax</td><td class="num">${A.taxOn ? '17%, exemptions, 3-yr allowances' : 'off'}</td></tr>
+     <tr><td>Crew planning (floor 6)</td><td class="num">${A.crewPlan ? `monthly; S$${fmt(FIXED.hireCost)} hire / S$${fmt(FIXED.releaseCost)} release` : 'off: one crew per truck'}</td></tr>
+     <tr><td>Peak premium / off-peak discount (rooftop)</td><td class="num">+${pct(A.peakUp)} / −${pct(A.offDown)}</td></tr>
+     <tr><td>Peak customers who can move their date</td><td class="num">${pct(A.flex)}</td></tr>
+     <tr><td>Price elasticity of our demand</td><td class="num">${A.elast.toFixed(1)}</td></tr>
      <tr><td>Rule changes (floor 5)</td><td class="num">${{ random: 'Random, lean against the wind', frozen: 'Frozen', loosen: 'Loosen July ' + A.polYear, tighten: 'Tighten July ' + A.polYear }[A.polMode]}</td></tr>`;
 }
 
@@ -2723,19 +3335,27 @@ function recompute() {
   // ("history repeats") forecast: the company cannot see the shock coming.
   const forced = A.recMode !== 'random' || A.polMode !== 'random';
   const aPlan = { ...A, recMode: 'random', polMode: 'random' }, scPlan = forced ? genScenarios(aPlan) : null;
-  const results = {}; STRATS.forEach(s => results[s.id] = runStrategy(s.id, sc, A, forced ? Int32Array.from(runStrategy(s.id, scPlan, aPlan).T) : null));
-  Object.assign(LAST, { sc, results });
-  renderOutlook(sc); renderShocks(); renderScenarioTable(); renderNewsvendor(results); renderRisk(results); renderROI(results); renderRecommendation(results); renderTornado();
+  const results = {}; STRATS.forEach(s => results[s.id] = runStrategy(s.id, sc, A, forced ? planOf(runStrategy(s.id, scPlan, aPlan)) : null));
+  Object.assign(LAST, { sc, results, scPlan });
+  // comparison for the crew-planning panel: the recommended plan with one full-time crew per newsvendor truck
+  LAST.fixedCrew = A.crewPlan ? runStrategy(REC, sc, { ...A, crewPlan: false }, forced ? planOf(runStrategy(REC, scPlan, { ...aPlan, crewPlan: false })) : null) : null;
+  renderOutlook(sc); renderShocks(); renderNewsvendor(results); renderRisk(results); renderROI(results);
   updateMap();
-  drawStreams();
-  ChangeFX.apply(main, before);
+  drawStreams(); renderSense(); renderMarket();
+  // The slower, secondary analyses (stress table, pricing, go/no-go, tornado: about 40 more
+  // simulation runs) follow in small steps so the page stays responsive; a newer recompute cancels them.
+  const tok = (recompute.tok = (recompute.tok || 0) + 1);
+  const steps = [() => renderBrokerTest(sc), () => renderScenarioTable(), () => { computePricing(); renderPricing(); }, () => { LAST.gate = computeGate(results); renderGate(); },
+                 () => renderTornado(), () => { renderRecommendation(results); ChangeFX.apply(main, before); }];
+  return new Promise(done => { const next = i => { if (tok !== recompute.tok) return done(false); if (i === steps.length) { LAST.ready = true; return done(true); }
+    steps[i](); setTimeout(() => next(i + 1), 0); }; LAST.ready = false; setTimeout(() => next(0), 0); });
 }
 function buildDrawer() {
   const box = $('#sliders');
   box.innerHTML = SLIDERS.map(([k, label, min, max, step, f]) =>
     `<label class="rng">${label} <output id="o_${k}">${f(A[k])}</output><input type="range" id="i_${k}" min="${min}" max="${max}" step="${step}" value="${A[k]}"></label>`).join('');
   let tmr = null;
-  const onChange = () => { clearTimeout(tmr); $('#busy').classList.add('show'); tmr = setTimeout(() => { recompute(); $('#busy').classList.remove('show'); }, 250); };
+  const onChange = () => { clearTimeout(tmr); $('#busy').classList.add('show'); tmr = setTimeout(() => { recompute().then(ok => { if (ok) $('#busy').classList.remove('show'); }); }, 250); };
   SLIDERS.forEach(([k, , , , , f]) => { const inp = $('#i_' + k); inp.addEventListener('input', () => {
     A[k] = +inp.value; $('#o_' + k).textContent = f(A[k]);
     if (k === 'btoFuture') { $('#btoIn2').value = A[k]; $('#btoOut').textContent = fmt(A[k]); }
@@ -2744,8 +3364,11 @@ function buildDrawer() {
   const b2 = $('#btoIn2'); b2.value = A.btoFuture; $('#btoOut').textContent = fmt(A.btoFuture);
   b2.addEventListener('input', () => { A.btoFuture = +b2.value; $('#btoOut').textContent = fmt(A.btoFuture); $('#i_btoFuture').value = A.btoFuture; $('#o_btoFuture').textContent = fmt(A.btoFuture); onChange(); });
   $('#tvIn').addEventListener('change', e => { useTV = e.target.checked; onChange(); });
+  $('#taxIn').checked = A.taxOn; $('#crewIn').checked = A.crewPlan;
+  $('#taxIn').onchange = e => { A.taxOn = e.target.checked; onChange(); };
+  $('#crewIn').onchange = e => { A.crewPlan = e.target.checked; onChange(); };
   $('#resetBtn').onclick = () => { A = { ...BASE }; useTV = false; $('#tvIn').checked = false; buildDrawer(); syncShockControls(); recompute(); };
-  if (!buildDrawer.wired) { buildDrawer.wired = true; wireShockControls(onChange); }
+  if (!buildDrawer.wired) { buildDrawer.wired = true; wireShockControls(onChange); wirePricing(); }
   const open = v => { $('#drawer').classList.toggle('open', v); $('#drawer').setAttribute('aria-hidden', !v); $('#assumeBtn').setAttribute('aria-expanded', v); };
   $('#assumeBtn').onclick = () => open(!$('#drawer').classList.contains('open'));
   $('#drawerClose').onclick = () => open(false);
@@ -2794,7 +3417,7 @@ function goFloor(t) {
 function liftHint(dir, p) {
   const h = $('#liftHint'), fl = LIFT.floors, nxt = fl[LIFT.cur + dir];
   if (!dir || !nxt) { h.classList.remove('show'); return; }
-  $('#liftHintTxt').textContent = `${dir > 0 ? '▲ Keep scrolling up' : '▼ Keep scrolling down'} to floor ${nxt.dataset.short}: ${nxt.dataset.label}`;
+  $('#liftHintTxt').textContent = `${dir > 0 ? '▲ Keep scrolling up' : '▼ Keep scrolling down'} to ${nxt.dataset.short === 'R' ? 'the rooftop' : 'floor ' + nxt.dataset.short}: ${nxt.dataset.label.replace('Rooftop: ', '')}`;
   h.classList.toggle('top', dir > 0); h.classList.toggle('bottom', dir < 0); h.style.setProperty('--p', Math.min(100, p * 100) + '%'); h.classList.add('show');
 }
 function liftPush(dir, amount) {                    // dir +1 = up a floor, -1 = down
@@ -2850,13 +3473,13 @@ function startAnalysis() {
   $('#yearModal').addEventListener('click', e => { if (e.target.id === 'yearModal') closeYearDialog(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#yearModal').hidden) closeYearDialog(); });
   buildLift(); buildDrawer();
-  renderHero(); renderFloor1(); renderBacktest();
+  renderHero(); renderFloor1(); renderMarket(); renderBacktest();
   renderClusters(false);
   $('#kIn').addEventListener('input', () => ChangeFX.wrap($('#f2'), () => renderClusters(true)));
   $('#dIn').addEventListener('input', () => ChangeFX.wrap($('#f2'), () => renderClusters(false)));
   $('#rerunK').onclick = () => renderClusters(true);
   recompute();
-  // Replay the k-means animation the first time floor 2 scrolls into view
+  // Replay the k-means animation the first time floor 9 scrolls into view
   new IntersectionObserver((es, obs) => es.forEach(e => { if (e.isIntersecting) { renderClusters(true); obs.disconnect(); } }), { threshold: 0.4 }).observe($('#f2'));
 }
 // Expose results for checking in the browser console

@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
 const ROOT = path.resolve(__dirname, '..', '..');
 (async () => { const b = await chromium.launch(); const p = await b.newPage({viewport:{width:1440,height:900}});
   await p.goto('file://' + path.join(ROOT, 'app', 'MoveWell_HDB_Moving_Demand.html')); await p.waitForTimeout(1000);
-  await p.evaluate(()=>openAnalysis()); await p.waitForTimeout(8000);
+  await p.evaluate(()=>openAnalysis()); await p.waitForFunction(()=>window.MOVEWELL && MOVEWELL.LAST.ready, null, {timeout:120000});
   const ref = await p.evaluate(()=>{ const m=MODEL, L=MOVEWELL.LAST; const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
     const res4 = CL.best(CL.X,4);
     const yearly = L.sc.map(s=>[0,1,2,3,4].map(k=>{let v=0;for(let t=k*12;t<k*12+12;t++)v+=s.res[t]+s.rent[t]+s.bto[t]+s.priv[t];return v;}));
@@ -22,6 +22,11 @@ const ROOT = path.resolve(__dirname, '..', '..');
       strategies:Object.fromEntries(Object.entries(L.results).map(([k,v])=>[k,{meanNPV:v.meanNPV,pLoss:v.pLoss,cvar5:v.cvar5,cashNeed:v.cashNeed,T:[0,12,24,36,48].map(t=>v.T[t]),irr:v.irr}])),
       jobs2031:{p10:q(yearly.map(r=>r[4]),0.1),p50:q(yearly.map(r=>r[4]),0.5),p90:q(yearly.map(r=>r[4]),0.9)},
       scen:L.scen.map(r=>({name:r.name,res31:r.res31,npv:r.npv,pLoss:r.pLoss,cvar:r.cvar})),
-      jobsYear:Object.fromEntries(JOB_YEARS.map(y=>[y,jobsYear(y)]))
+      jobsYear:Object.fromEntries(JOB_YEARS.map(y=>[y,jobsYear(y)])),
+      pricing:(P=>({tiers:priceTiers(),meanNPV:P.priced.meanNPV,pLoss:P.priced.pLoss,cvar5:P.priced.cvar5,T:[0,12,24,36,48].map(t=>P.priced.T[t]),
+        premOnly:P.premOnly.meanNPV,discOnly:P.discOnly.meanNPV,grid:P.grid,be:P.be}))(L.pricing),
+      gate:(g=>({be:g.be,pReach:g.pReach,gateShare:g.gateShare,gateJobs:g.gateJobs,ci:g.ci,verdict:g.verdict,stop:g.stop}))(L.gate),
+      brokerTest:L.brokerTest.map(r=>({name:r.name,meanNPV:r.r.meanNPV,pLoss:r.r.pLoss})),
+      liveMovers:DATA.competitors.live
     }; });
   fs.writeFileSync(path.join(ROOT, 'data', 'app_reference.json'), JSON.stringify(ref, null, 1)); console.log('wrote data/app_reference.json'); await b.close(); })();

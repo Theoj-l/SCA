@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PROC = ROOT / 'data' / 'processed'
 APP_KEYS = ['resale', 'rental', 'blocks', 'cohorts', 'flatTypes', 'privateQ', 'holidays', 'regionsSvg', 'census',
-            'paSvg', 'resaleOld', 'compNat', 'rentalOldQ', 'privateQOld', 'paCtx']
+            'paSvg', 'resaleOld', 'compNat', 'rentalOldQ', 'privateQOld', 'paCtx', 'competitors']
 
 bundle = {k: json.load(open(PROC / f'{k}.json')) for k in APP_KEYS}
 template = (ROOT / 'app' / 'template.html').read_text(encoding='utf-8')
